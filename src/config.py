@@ -18,5 +18,4 @@ BEARER_TOKEN = os.environ['BEARER_TOKEN_PR']
 ACCESS_TOKEN = os.environ['ACCESS_TOKEN_PR']
 ACCESS_TOKEN_SECRET = os.environ['ACCESS_TOKEN_SECRET_PR']
 
-TARGET_ACCOUNTS_1 = ['BitcoinMagazine', 'CoinDesk']
-TARGET_ACCOUNTS_2 = ['Bitcoin', 'BT']
+TARGET_ACCOUNTS = ['BitcoinMagazine', 'CoinDesk', 'Bitcoin', 'BT']
