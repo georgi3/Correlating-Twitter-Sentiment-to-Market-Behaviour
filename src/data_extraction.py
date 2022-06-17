@@ -10,7 +10,7 @@ from src.db_handler import insert_to_db
 
 class TweetRetriever:
     """
-    Retrieves tweets and their comments from the list of user accounts.
+    Retrieves tweets and their comments from the list of user accounts; saves tweets to the database.
         NOTE: comments could be extracted only up last 7 days, unless you have premium api. However, for tweets you can
         extract up to 3200 most recent tweets from user's timeline. For more check twitter's api.
 
