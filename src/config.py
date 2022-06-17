@@ -18,4 +18,11 @@ BEARER_TOKEN = os.environ['BEARER_TOKEN_PR']
 ACCESS_TOKEN = os.environ['ACCESS_TOKEN_PR']
 ACCESS_TOKEN_SECRET = os.environ['ACCESS_TOKEN_SECRET_PR']
 
+# DATABASE
+DATABASE = os.environ['DATABASE']
+USER = os.environ['DB_USER']
+PASSWORD = os.environ['PASSWORD']
+HOST = os.environ['HOST']
+PORT = os.environ['PORT']
+
 TARGET_ACCOUNTS = ['BitcoinMagazine', 'CoinDesk', 'Bitcoin', 'BT']
