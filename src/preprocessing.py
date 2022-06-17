@@ -27,7 +27,7 @@ def removing_common_patterns(dataframe):
         row = re.sub(r"@\S+", ' ', row)                         # removing mentions
         row = re.sub(r'|'.join(string.whitespace), ' ', row)    # removing whitespaces chars
         row = re.sub(fr'[^{GOOD_CHARS}]', ' ', row)             # removing non ascii and non emoji chars
-        row = row.replace(r'&[A-Za-z0-9#]+;', ' ')              # removing html character reference
+        row = re.sub(r'&[A-Za-z\d#]+;', ' ', row)              # removing html character reference
         row = ' '.join(emoji.get_emoji_regexp().split(row))     # create spaces between emojis
         row = re.sub(r'\s+', ' ', row)                          # removing extra spaces
         row = re.sub(r'^\s', '', row)                           # removing leading spaces
@@ -46,12 +46,12 @@ def drop_spam_filter_1(dataframe):
     # duplicates that occur > 2
     pattern_1 = re.compile(r'(^| )gm($| |!+|\.)', flags=re.IGNORECASE)
     pattern_2 = re.compile(r'(^| )Thank me later($| |!+|\.)', flags=re.IGNORECASE)
-    pattern_3 = re.compile(r'(^| )FREE($| |!+|\.)')
-    df = df[~((df[column].str.match(pattern_1)) & (df[column].str.len() < 30))]                 # dropping tweets
-    # with common spam messages
-    df = df[~(df[column].str.match(pattern_2))]     # dropping second pattern
-    df = df[~(df[column].str.match(pattern_3))]     # dropping third pattern
-    short_df = df.loc[df[column].str.len() <= 20]   # tweets where char count <= 20
+    pattern_3 = re.compile(r' FREE')
+    # dropping tweets with common spam messages
+    df = df[~((df[column].str.match(pattern_1)) & (df[column].str.len() < 30))]     # dropping first pattern
+    df = df[~(df[column].str.match(pattern_2))]                                     # dropping second pattern
+    df = df[~(df[column].str.contains(pattern_3, regex=True))]                      # dropping third pattern
+    short_df = df.loc[df[column].str.len() <= 20]                                   # tweets where char count <= 20
 
     non_adj_adv = \
         short_df[~short_df[column].apply(           # saving indices that we want to drop of non adjectives/adverbs
