@@ -14,12 +14,12 @@ def create_connection():
     return connection, cursor
 
 
-def create_table():
+def create_table(table_name):
     """Creates sql table"""
     query = f"""
-    CREATE TABLE IF NOT EXISTS  twitter_btc
+    CREATE TABLE IF NOT EXISTS  {table_name}
     (
-        PK_ID SERIAL PRIMARY KEY ,
+        PK_ID SERIAL PRIMARY KEY,
         QUERY_YEAR INTEGER,
         QUERY_MONTH INTEGER,
         QUERY_DAY INTEGER,
@@ -40,7 +40,7 @@ def create_table():
         FOLLOWER_COUNT INTEGER,
         FOLLOWING_COUNT INTEGER,
         TWEET_COUNT INTEGER,
-        LIST_COUNT INTEGER
+        LISTED_COUNT INTEGER
     );
     """
     connection = None
@@ -57,14 +57,15 @@ def create_table():
             connection.close()
 
 
-def insert_to_db(values_list: list):
+def insert_to_db(values_list: list, table_name='raw_tweets'):
     """
-    Inserts rows into table.
+    Inserts rows into a table
     :param values_list: list, list of tuples separates by coma, e.g. [(1, 3, ..., 2), (2, 1, ... 3)]
+    :param table_name: str, table name
     """
 
     query = f"""
-    INSERT INTO twitter_btc
+    INSERT INTO {table_name}
     (
         QUERY_YEAR,
         QUERY_MONTH,
@@ -86,7 +87,7 @@ def insert_to_db(values_list: list):
         FOLLOWER_COUNT,
         FOLLOWING_COUNT,
         TWEET_COUNT,
-        LIST_COUNT
+        LISTED_COUNT
     )
     VALUES %s;
 """
@@ -136,11 +137,12 @@ def _delete_table(table: str):
         connection.close()
 
 
-def retrieve_all_data(table='twitter_btc'):
+def retrieve_all_data(table='raw_tweets'):
     """Retrieves all the data"""
-    query = f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, RETWEET_COUNT, REPLY_COUNT,
-     LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, FOLLOWER_COUNT, FOLLOWING_COUNT,
-      TWEET_COUNT, LIST_COUNT FROM {table};"""
+    query = f"""SELECT * FROM {table};"""
+    # query = f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, RETWEET_COUNT, REPLY_COUNT,
+    #  LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, FOLLOWER_COUNT, FOLLOWING_COUNT,
+    #  TWEET_COUNT, LISTED_COUNT FROM {table};"""
     connection = None
     rows = None
     try:
@@ -156,17 +158,18 @@ def retrieve_all_data(table='twitter_btc'):
     return rows
 
 
-def retrieve_from_last_period(period):
+def retrieve_from_last_period(period, table_name):
     """
-    Retrieves data for the last period.
+    Retrieves data for the last period
     :param period: datetime.datetime object
+    :param table_name: str, table name
     :return: list of rows
     """
     year, month, day, hour = period.year, period.month, period.day, period.hour
 
     query = f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, RETWEET_COUNT, REPLY_COUNT,
      LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, FOLLOWER_COUNT, FOLLOWING_COUNT,
-     TWEET_COUNT, LIST_COUNT FROM twitter_btc
+     TWEET_COUNT, LISTED_COUNT FROM {table_name}
       WHERE QUERY_YEAR >= %s AND QUERY_MONTH >= %s AND QUERY_DAY >= %s AND QUERY_HOUR >= %s;"""
     connection = None
     rows = None
