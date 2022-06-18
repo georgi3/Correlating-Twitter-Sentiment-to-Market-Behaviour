@@ -27,7 +27,7 @@ def removing_common_patterns(dataframe):
         row = re.sub(r"@\S+", ' ', row)                         # removing mentions
         row = re.sub(r'|'.join(string.whitespace), ' ', row)    # removing whitespaces chars
         row = re.sub(fr'[^{GOOD_CHARS}]', ' ', row)             # removing non ascii and non emoji chars
-        row = re.sub(r'&[A-Za-z\d#]+;', ' ', row)              # removing html character reference
+        row = re.sub(r'&[A-Za-z\d#]+;', ' ', row)               # removing html character reference
         row = ' '.join(emoji.get_emoji_regexp().split(row))     # create spaces between emojis
         row = re.sub(r'\s+', ' ', row)                          # removing extra spaces
         row = re.sub(r'^\s', '', row)                           # removing leading spaces
