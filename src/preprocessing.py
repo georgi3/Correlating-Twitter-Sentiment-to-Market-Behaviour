@@ -103,7 +103,7 @@ def drop_spam_filter_2(dataframe):
     df = df.loc[~((df[column].str.len() > 28) & (df[column].str.split().map(
         lambda words: len(words)) <= 3))]    # (> 28 chars) & (<= 3 words) per tweet ==> drop
     df = df.loc[~(df[column].str.split().map(
-        lambda words: sum(len(word) for word in words) / len(words)) >= 15)]  # average len(word) >= 15 ==> drop
+        lambda words: sum(len(word) for word in words) / len(words)) > 14)]     # average len(word) > 14 ==> drop
     return df
 
 
@@ -147,6 +147,7 @@ def clean_slang(row):
     row = re.sub(r"(^| )GG($| |!+|\.)", ' smart investment ', row, flags=re.IGNORECASE)
     # other
     row = re.sub(r"(^| )u($| )", ' you ', row, flags=re.IGNORECASE)
+    row = re.sub(' n ', ' and ', row)
     row = re.sub(' w ', ' with ', row)
     row = re.sub(r"(^| )smh($| |!+|h+)", ' shaking my head ', row, flags=re.IGNORECASE)
     row = re.sub(r"(^| )tbh( |h+)", ' to be honest ', row, flags=re.IGNORECASE)
@@ -207,10 +208,10 @@ def clean_text(dataframe):
 
     def clean(row):
         row = str(row)
-        row = clean_slang(row)
-        row = clean_money(row)
         row = clean_other(row)
         row = clean_contractions(row)
+        row = clean_slang(row)
+        row = clean_money(row)
         row = re.sub(r'^\. ', '', row)                   # get rid of the dots in the beginning
         row = re.sub(r'\s+', ' ', row)                   # get rid of extra spaces
         return row
