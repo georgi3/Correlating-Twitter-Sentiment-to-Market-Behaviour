@@ -42,15 +42,19 @@ def drop_spam_filter_1(dataframe):
     df = dataframe.copy(deep=True)
     column = 'text'
     df = df[~df[column].isin(['', ' '])]                                                        # dropping empty strings
-    df = df[~df[column].isin(df[column].value_counts().loc[lambda count: count > 2].index)]     # dropping text
+    df = df[~df[column].isin(df[column].value_counts().loc[lambda count: count > 2].index)]     # dropping duplicates >2
     # duplicates that occur > 2
     pattern_1 = re.compile(r'(^| )gm($| |!+|\.)', flags=re.IGNORECASE)
     pattern_2 = re.compile(r'(^| )Thank me later($| |!+|\.)', flags=re.IGNORECASE)
     pattern_3 = re.compile(r' FREE')
+    pattern_4 = re.compile(r'milkywaydefi|taxi|shib|santafloki|luffy|check out|play to earn|Bluebit',
+                           flags=re.IGNORECASE)
+
     # dropping tweets with common spam messages
     df = df[~((df[column].str.match(pattern_1)) & (df[column].str.len() < 30))]     # dropping first pattern
     df = df[~(df[column].str.match(pattern_2))]                                     # dropping second pattern
     df = df[~(df[column].str.contains(pattern_3, regex=True))]                      # dropping third pattern
+    df = df[~(df[column].str.contains(pattern_4, regex=True))]
     short_df = df.loc[df[column].str.len() <= 20]                                   # tweets where char count <= 20
 
     non_adj_adv = \
@@ -220,6 +224,20 @@ def clean_text(dataframe):
     return dataframe
 
 
+def drop_spam_filter_3(dataframe):
+    """Doubles checks for spams after all text transformations"""
+    df = dataframe.copy(deep=True)
+    column = 'text'
+    df = df[~df[column].isin(df[column].value_counts().loc[lambda count: count > 2].index)]              # identical > 2
+    df = df[~df['text'].str.contains('|'.join(                                            # identical up to last 5 chars
+        [re.escape(pattern) for pattern in
+         df['text'].str[:-5].value_counts().loc[lambda count: count > 2].index.tolist()]))]
+
+    df['uniqueness_%'] = df.text.str.split().map(lambda row: round(len(set(row)) / len(row) * 100))
+    df = df.loc[df['uniqueness_%'] > 53]                                    # keep tweets if only % of unique words > 53
+    return df
+
+
 text_pipe = Pipeline(steps=[
     ('remove_common_patters', FunctionTransformer(func=removing_common_patterns)),
     ('spam_filter_1', FunctionTransformer(func=drop_spam_filter_1)),
@@ -227,4 +245,5 @@ text_pipe = Pipeline(steps=[
     ('demojize', FunctionTransformer(func=demojize)),
     ('spam_filter_2', FunctionTransformer(func=drop_spam_filter_2)),
     ('clean_text', FunctionTransformer(func=clean_text)),
+    ('spam_filter_3', FunctionTransformer(func=drop_spam_filter_3))
 ])
