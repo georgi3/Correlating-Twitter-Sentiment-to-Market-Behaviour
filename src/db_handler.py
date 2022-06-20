@@ -14,9 +14,10 @@ def create_connection():
     return connection, cursor
 
 
-def create_table(table_name):
+def create_table(table_name, query=None):
     """Creates sql table"""
-    query = f"""
+
+    query = query if query else f"""
     CREATE TABLE IF NOT EXISTS  {table_name}
     (
         PK_ID SERIAL PRIMARY KEY,
@@ -57,14 +58,15 @@ def create_table(table_name):
             connection.close()
 
 
-def insert_to_db(values_list: list, table_name='raw_tweets'):
+def insert_to_db(values_list: list, table_name='raw_tweets', query=None):
     """
     Inserts rows into a table
     :param values_list: list, list of tuples separates by coma, e.g. [(1, 3, ..., 2), (2, 1, ... 3)]
     :param table_name: str, table name
+    :param query: str, query
     """
 
-    query = f"""
+    query = query if query else f"""
     INSERT INTO {table_name}
     (
         QUERY_YEAR,
@@ -105,9 +107,9 @@ def insert_to_db(values_list: list, table_name='raw_tweets'):
             connection.close()
 
 
-def _delete_all_data_from_table(table: str):
+def _delete_all_data_from_table(table: str, query=None):
     """Deletes all data from the table"""
-    query = f"""DELETE FROM {table};"""
+    query = query if query else f"""DELETE FROM {table};"""
     connection = None
     try:
         connection, cursor = create_connection()
@@ -137,12 +139,12 @@ def _delete_table(table: str):
         connection.close()
 
 
-def retrieve_all_data(table='raw_tweets'):
+def retrieve_all_data(table='raw_tweets', query=None):
     """Retrieves all the data"""
-    query = f"""SELECT * FROM {table};"""
-    # query = f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, RETWEET_COUNT, REPLY_COUNT,
-    #  LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, FOLLOWER_COUNT, FOLLOWING_COUNT,
-    #  TWEET_COUNT, LISTED_COUNT FROM {table};"""
+    # query = query if query else f"""SELECT * FROM {table};"""
+    query = query if query else f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, 
+    RETWEET_COUNT, REPLY_COUNT, LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, 
+    FOLLOWER_COUNT, FOLLOWING_COUNT, TWEET_COUNT, LISTED_COUNT FROM {table};"""
     connection = None
     rows = None
     try:
