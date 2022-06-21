@@ -5,11 +5,90 @@ from datetime import datetime, timedelta
 from tweepy.errors import TweepyException, NotFound
 from src.db_handler import insert_to_db
 
-# https://developer.twitter.com/en/docs/twitter-api/rate-limits
+
+class BtcHourly:
+    """
+    Extracts hourly data for BTC, saves it to database.
+
+    API allows up to 100,000 free calls per month.
+    Class should not make more calls than (31 days * 24 hours) = 720
+    """
+    def __init__(self, api_key, frequency=24):
+        """
+        Constructor
+        :param api_key: str, api key from CompareCrypto (it's free)
+        :param frequency: int,  data for past x hours (max 2000)
+        """
+        self.api_key = api_key
+        self.frequency = frequency
+
+    def get_request(self):
+        """
+        Sends and returns response.
+        :return: response
+        """
+        url = 'https://min-api.cryptocompare.com/data/v2/histohour?'                # CompareCrypto
+        params = {
+            'fsym': 'BTC',                                                          # coin symbol
+            'tsym': 'USD',                                                          # currency symbol to convert to
+            'limit': self.frequency,                                                # number of data points
+        }
+        headers = {
+            'accept': 'application/json',
+            'authorization': f'Apikey {self.api_key}'
+        }
+        response = requests.get(url=url, headers=headers, params=params)
+        if not response:
+            raise Exception(f'BAD RESPONSE: '
+                            f'\nSTATUS: {response.status_code}\nMESSAGE: {response.json()}'
+                            f'\nREQ URL: {response.url}')
+        return response
+
+    @staticmethod
+    def _insert_to_db(parsed_response):
+        """
+        Creates list of tuples and inserts it to database"
+        :param parsed_response: list, parsed response
+        """""
+        query = """
+            INSERT INTO btc_hourly 
+            (
+            TIME_STAMP, HIGH, LOW, OPEN_, CLOSE_, VOLUME_FROM, VOLUME_TO
+            ) VALUES %s;
+        """
+        rows = [tuple(hour.values()) for hour in parsed_response]
+        insert_to_db(rows, query=query)
+        print(f'{len(rows)} have been inserted to btc_hourly.')
+
+    def parse_response(self, response):
+        """
+        Parses response, saves response to db by calling _insert_to_db method
+        :param response:
+        :return:
+        """
+        res = response.json()
+        data = res.get('Data', {}).get('Data', None)
+        if data is None:
+            raise Exception('Data is None')
+        parsed = []
+        for point in data:
+            dp = {k: v for k, v in point.items() if k in ('time', 'high', 'low', 'open', 'volumefrom',
+                                                          'volumeto', 'close')}
+            parsed.append(dp)
+        self._insert_to_db(parsed)
+        return parsed
+
+    def extract_bitcoin_hourly(self):
+        print('Requesting BitCoin Hourly Data...')
+        response = self.get_request()
+        print(f'RESPONSE STATUS: {response.status_code}')
+        self.parse_response(response)
+        print(f'Process finished.\n')
 
 
 class TweetRetriever:
     """
+    # https://developer.twitter.com/en/docs/twitter-api/rate-limits
     Retrieves tweets and their comments from the list of user accounts; saves tweets to the database.
         NOTE: comments could be extracted only up last 7 days, unless you have premium api. However, for tweets you can
         extract up to 3200 most recent tweets from user's timeline. For more check twitter's api.
