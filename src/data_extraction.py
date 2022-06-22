@@ -6,59 +6,61 @@ from tweepy.errors import TweepyException, NotFound
 from src.db_handler import insert_to_db
 
 
-class BtcHourly:
+class BtcExtractor:
     """
     Extracts hourly data for BTC, saves it to database.
 
     API allows up to 100,000 free calls per month.
     Class should not make more calls than (31 days * 24 hours) = 720
     """
-    def __init__(self, api_key, frequency=24):
+    def __init__(self, api_key, frequency='hourly'):
         """
         Constructor
         :param api_key: str, api key from CompareCrypto (it's free)
-        :param frequency: int,  data for past x hours (max 2000)
+        :param frequency: str, ['hourly', 'daily']
         """
         self.api_key = api_key
         self.frequency = frequency
+        self.url = 'https://min-api.cryptocompare.com/data/v2/histoday?' if frequency == 'daily' \
+            else 'https://min-api.cryptocompare.com/data/v2/histohour?'
+        self.limit = 1 if frequency == 'daily' else 24
+        self.table = 'btc_daily' if frequency == 'daily' else 'btc_hourly'
 
     def get_request(self):
         """
         Sends and returns response.
         :return: response
         """
-        url = 'https://min-api.cryptocompare.com/data/v2/histohour?'                # CompareCrypto
         params = {
             'fsym': 'BTC',                                                          # coin symbol
             'tsym': 'USD',                                                          # currency symbol to convert to
-            'limit': self.frequency,                                                # number of data points
+            'limit': self.limit,                                                    # number of data points
         }
         headers = {
             'accept': 'application/json',
             'authorization': f'Apikey {self.api_key}'
         }
-        response = requests.get(url=url, headers=headers, params=params)
+        response = requests.get(url=self.url, headers=headers, params=params)
         if not response:
             raise Exception(f'BAD RESPONSE: '
                             f'\nSTATUS: {response.status_code}\nMESSAGE: {response.json()}'
                             f'\nREQ URL: {response.url}')
         return response
 
-    @staticmethod
-    def _insert_to_db(parsed_response):
+    def _insert_to_db(self, parsed_response):
         """
         Creates list of tuples and inserts it to database"
         :param parsed_response: list, parsed response
         """""
-        query = """
-            INSERT INTO btc_hourly 
+        query = f"""
+            INSERT INTO {self.table} 
             (
-            TIME_STAMP, HIGH, LOW, OPEN_, CLOSE_, VOLUME_FROM, VOLUME_TO
+            TIME_STAMP, HIGH, LOW, OPEN_, VOLUME_FROM, VOLUME_TO, CLOSE_
             ) VALUES %s;
         """
         rows = [tuple(hour.values()) for hour in parsed_response]
         insert_to_db(rows, query=query)
-        print(f'{len(rows)} have been inserted to btc_hourly.')
+        print(f'{len(rows)} have been inserted to {self.frequency}.')
 
     def parse_response(self, response):
         """
@@ -78,8 +80,8 @@ class BtcHourly:
         self._insert_to_db(parsed)
         return parsed
 
-    def extract_bitcoin_hourly(self):
-        print('Requesting BitCoin Hourly Data...')
+    def extract_bitcoin(self):
+        print(f'Requesting BitCoin {self.frequency} Data...')
         response = self.get_request()
         print(f'RESPONSE STATUS: {response.status_code}')
         self.parse_response(response)
