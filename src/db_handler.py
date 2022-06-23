@@ -1,7 +1,7 @@
 import psycopg2
 from psycopg2 import DatabaseError
 from psycopg2.extras import execute_values
-from src.config import USER, DATABASE, PASSWORD, PORT, HOST
+from config import USER, DATABASE, PASSWORD, PORT, HOST
 
 
 def create_connection():
