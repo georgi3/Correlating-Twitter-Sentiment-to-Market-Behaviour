@@ -8,6 +8,7 @@ from db_handler import retrieve_all_data
 from preprocessing import hourly_pipe, daily_pipe
 from data_manager import extract_tweets_hourly, extract_btc_hourly, extract_btc_daily
 from apscheduler.schedulers.background import BackgroundScheduler
+import settings
 
 app = Flask(__name__, template_folder='templates')
 
