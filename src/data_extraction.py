@@ -4,7 +4,7 @@ import tweepy
 import requests
 from datetime import datetime, timedelta
 from tweepy.errors import TweepyException, NotFound
-from src.db_handler import insert_to_db
+from db_handler import insert_to_db
 import yfinance as yf
 
 
