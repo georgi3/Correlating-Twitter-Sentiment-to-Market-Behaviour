@@ -4,9 +4,9 @@ import datetime
 import pandas as pd
 import plotly.express as px
 from flask import Flask, render_template
-from src.db_handler import retrieve_all_data
-from src.preprocessing import hourly_pipe, daily_pipe
-from src.data_manager import extract_tweets_hourly, extract_btc_hourly, extract_btc_daily
+from db_handler import retrieve_all_data
+from preprocessing import hourly_pipe, daily_pipe
+from data_manager import extract_tweets_hourly, extract_btc_hourly, extract_btc_daily
 from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__, template_folder='templates')
@@ -120,9 +120,9 @@ def daily():
 
 
 if __name__ == '__main__':
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(extract_tweets_hourly(), 'interval', hours=1)
-    scheduler.add_job(extract_btc_hourly(), 'interval', hours=1)
-    scheduler.add_job(extract_btc_daily(), 'interval', hours=24)
-    scheduler.start()
+    # scheduler = BackgroundScheduler()
+    # scheduler.add_job(extract_tweets_hourly(), 'interval', hours=1)
+    # scheduler.add_job(extract_btc_hourly(), 'interval', hours=1)
+    # scheduler.add_job(extract_btc_daily(), 'interval', hours=24)
+    # scheduler.start()
     app.run(debug=False, host='0.0.0.0', port=5678)
