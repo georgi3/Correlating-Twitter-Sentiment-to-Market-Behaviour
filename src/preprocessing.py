@@ -13,6 +13,7 @@ from sklearn.pipeline import Pipeline
 SLANG = ['REKT', 'WAGMI', 'NGMI', 'HODL', 'BEAR', 'BEARISH', 'BULL', 'BULLISH', 'SHITCOIN', 'LFG', 'BLUECHIP', 'GG']
 slang_patterns = re.compile(r'|'.join(SLANG), flags=re.IGNORECASE)
 GOOD_CHARS = re.escape(string.printable + ''.join(emoji.EMOJI_DATA.keys()))
+nltk.download('vader_lexicon')
 
 
 # TEXT PREPROCESSING FUNCTIONS
