@@ -3,8 +3,11 @@ import nltk
 import emoji
 import string
 import contractions
+import datetime
 import pandas as pd
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import MinMaxScaler
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.pipeline import Pipeline
 
 SLANG = ['REKT', 'WAGMI', 'NGMI', 'HODL', 'BEAR', 'BEARISH', 'BULL', 'BULLISH', 'SHITCOIN', 'LFG', 'BLUECHIP', 'GG']
@@ -12,6 +15,7 @@ slang_patterns = re.compile(r'|'.join(SLANG), flags=re.IGNORECASE)
 GOOD_CHARS = re.escape(string.printable + ''.join(emoji.EMOJI_DATA.keys()))
 
 
+# TEXT PREPROCESSING FUNCTIONS
 def removing_common_patterns(dataframe):
     """Removes common patterns from text"""
     column = 'text'
@@ -233,9 +237,81 @@ def drop_spam_filter_3(dataframe):
         [re.escape(pattern) for pattern in
          df['text'].str[:-5].value_counts().loc[lambda count: count > 2].index.tolist()]))]
 
-    df['uniqueness_%'] = df.text.str.split().map(lambda row: round(len(set(row)) / len(row) * 100))
-    df = df.loc[df['uniqueness_%'] > 53]                                    # keep tweets if only % of unique words > 53
+    df['word_uniqueness_%'] = df.text.str.split().map(lambda row: round(len(set(row)) / len(row) * 100))
+    df = df.loc[df['word_uniqueness_%'] > 53]                               # keep tweets if only % of unique words > 53
     return df
+
+
+# OTHER
+def to_datetime(dataframe: pd.DataFrame, columns: list):
+    """Converts passed columns to datetime objects"""
+    for column in columns:
+        dataframe[column] = pd.to_datetime(dataframe[column])
+    return dataframe
+
+
+def get_sentiment(dataframe):
+    column = 'text'
+    vd = SentimentIntensityAnalyzer()
+
+    def transform(row):
+        return dict(vd.polarity_scores(row)).get('compound')
+    dataframe['sentiment'] = dataframe[column].apply(transform)
+    return dataframe
+
+
+def tweet_daily_pipe(dataframe):
+    df = dataframe.copy(deep=True)
+    df = dashboard_pipe.fit_transform(df)
+    df = df.groupby([df['tweet_created'].dt.strftime('%y-%m-%d')])['sentiment'].agg(['mean', 'count'])
+    df.columns = ['avg_sentiment', 'tweet_count']
+    df.index = pd.to_datetime(df.index, format='%y-%m-%d')
+    return df
+
+
+def btc_daily_pipe(dataframe):
+    df = dataframe.copy(deep=True)
+    df.index = pd.to_datetime(df['date'])
+    df.set_index = df['date']
+    return df
+
+
+def daily_pipe(tweets_daily, btc_daily):
+    tweets_daily_df = tweets_daily.copy(deep=True)
+    btc_daily_df = btc_daily.copy(deep=True)
+    btc_daily_df = btc_daily_pipe(btc_daily_df)
+    tweets_daily_df = tweet_daily_pipe(tweets_daily_df)
+    dataframe = pd.merge(btc_daily_df, tweets_daily_df, left_index=True, right_index=True, how='right')
+    scaler = MinMaxScaler()
+    dataframe[['close_norm', 'avg_sentiment_norm']] = scaler.fit_transform(dataframe[['close', 'avg_sentiment']])
+    return dataframe
+
+
+def tweet_hourly_pipe(dataframe):
+    df = dataframe.copy(deep=True)
+    df = dashboard_pipe.fit_transform(df)
+    df = df.groupby([df['tweet_created'].dt.strftime('%y-%m-%d-%H')])['sentiment'].agg(['mean', 'count'])
+    df.columns = ['avg_sentiment', 'tweet_count']
+    return df
+
+
+def btc_hourly_pipe(dataframe):
+    df = dataframe.copy(deep=True)
+    df['date'] = df['timestamp'].apply(lambda row: datetime.datetime.fromtimestamp(int(row)).strftime('%y-%m-%d-%H'))
+    return df
+
+
+def hourly_pipe(tweets_hourly, btc_hourly):
+    tweets_hourly_df = tweets_hourly.copy(deep=True)
+    btc_hourly_df = btc_hourly.copy(deep=True)
+    btc_hourly_df = btc_hourly_pipe(btc_hourly_df)
+    tweets_hourly_df = tweet_hourly_pipe(tweets_hourly_df)
+    dataframe = pd.merge(btc_hourly_df, tweets_hourly_df, left_on='date', right_on='tweet_created', how='right')
+    dataframe = dataframe.set_index('date')
+    dataframe.index = pd.to_datetime(dataframe.index, format='%y-%m-%d-%H')
+    scaler = MinMaxScaler()
+    dataframe[['close_norm', 'avg_sentiment_norm']] = scaler.fit_transform(dataframe[['close', 'avg_sentiment']])
+    return dataframe
 
 
 text_pipe = Pipeline(steps=[
@@ -245,5 +321,11 @@ text_pipe = Pipeline(steps=[
     ('demojize', FunctionTransformer(func=demojize)),
     ('spam_filter_2', FunctionTransformer(func=drop_spam_filter_2)),
     ('clean_text', FunctionTransformer(func=clean_text)),
-    ('spam_filter_3', FunctionTransformer(func=drop_spam_filter_3))
+    ('spam_filter_3', FunctionTransformer(func=drop_spam_filter_3)),
+    ('sentiment', FunctionTransformer(func=get_sentiment)),
 ])
+
+dashboard_pipe = Pipeline(steps=[
+    ('to_datetime', FunctionTransformer(func=to_datetime, kw_args={'columns': ['account_created', 'tweet_created']}))
+])
+
