@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Correlation</title>
+</head>
+<body>
+<div id='timeseries' class='timeseries'”></div>
+<div id='heatmap' class='heatmap'”></div>
+<div id='count' class='count'”></div>
+</body>
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type='text/javascript'>
+  var graphs = {{timeseries | safe}};
+  Plotly.plot('timeseries',graphs,{});
+</script>
+
+<script type='text/javascript'>
+  var graphs = {{heatmap | safe}};
+  Plotly.plot('heatmap',graphs,{});
+</script>
+<script type='text/javascript'>
+  var graphs = {{count | safe}};
+  Plotly.plot('count',graphs,{});
+</script>
+</html>
