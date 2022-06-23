@@ -120,9 +120,9 @@ def daily():
 
 
 if __name__ == '__main__':
-    # scheduler = BackgroundScheduler()
-    # scheduler.add_job(extract_tweets_hourly(), 'interval', hours=1)
-    # scheduler.add_job(extract_btc_hourly(), 'interval', hours=1)
-    # scheduler.add_job(extract_btc_daily(), 'interval', hours=24)
-    # scheduler.start()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(extract_tweets_hourly(), 'interval', hours=1)
+    scheduler.add_job(extract_btc_hourly(), 'interval', hours=1)
+    scheduler.add_job(extract_btc_daily(), 'interval', hours=24)
+    scheduler.start()
     app.run(debug=False, host='0.0.0.0', port=5678)
