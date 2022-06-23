@@ -14,11 +14,11 @@ def create_connection():
     return connection, cursor
 
 
-def create_table(table_name, query=None):
+def create_table(query=None):
     """Creates sql table"""
 
     query = query if query else f"""
-    CREATE TABLE IF NOT EXISTS  {table_name}
+    CREATE TABLE IF NOT EXISTS  raw_tweets
     (
         PK_ID SERIAL PRIMARY KEY,
         QUERY_YEAR INTEGER,
@@ -58,16 +58,15 @@ def create_table(table_name, query=None):
             connection.close()
 
 
-def insert_to_db(values_list: list, table_name='raw_tweets', query=None):
+def insert_to_db(values_list: list, query=None):
     """
     Inserts rows into a table
     :param values_list: list, list of tuples separates by coma, e.g. [(1, 3, ..., 2), (2, 1, ... 3)]
-    :param table_name: str, table name
     :param query: str, query
     """
 
     query = query if query else f"""
-    INSERT INTO {table_name}
+    INSERT INTO raw_tweets
     (
         QUERY_YEAR,
         QUERY_MONTH,
@@ -139,12 +138,12 @@ def _delete_table(table: str):
         connection.close()
 
 
-def retrieve_all_data(table='raw_tweets', query=None):
+def retrieve_all_data(query=None):
     """Retrieves all the data"""
     # query = query if query else f"""SELECT * FROM {table};"""
     query = query if query else f"""SELECT TWEET_CREATED, CONVERSATION_ID, TWEET_ID, AUTHOR_ID, TWEET_TEXT, 
     RETWEET_COUNT, REPLY_COUNT, LIKE_COUNT, QUOTE_COUNT, ACCOUNT_CREATED, ACCOUNT_ID, ACCOUNT_NAME, VERIFIED, 
-    FOLLOWER_COUNT, FOLLOWING_COUNT, TWEET_COUNT, LISTED_COUNT FROM {table};"""
+    FOLLOWER_COUNT, FOLLOWING_COUNT, TWEET_COUNT, LISTED_COUNT FROM raw_tweets;"""
     connection = None
     rows = None
     try:
