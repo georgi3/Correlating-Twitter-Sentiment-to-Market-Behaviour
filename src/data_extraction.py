@@ -1,91 +1,11 @@
 import time
+import pandas as pd
 import tweepy
 import requests
 from datetime import datetime, timedelta
 from tweepy.errors import TweepyException, NotFound
 from src.db_handler import insert_to_db
-
-
-class BtcExtractor:
-    """
-    Extracts hourly data for BTC, saves it to database.
-
-    API allows up to 100,000 free calls per month.
-    Class should not make more calls than (31 days * 24 hours) = 720
-    """
-    def __init__(self, api_key, frequency='hourly'):
-        """
-        Constructor
-        :param api_key: str, api key from CompareCrypto (it's free)
-        :param frequency: str, ['hourly', 'daily']
-        """
-        self.api_key = api_key
-        self.frequency = frequency
-        self.url = 'https://min-api.cryptocompare.com/data/v2/histoday?' if frequency == 'daily' \
-            else 'https://min-api.cryptocompare.com/data/v2/histohour?'
-        self.limit = 1 if frequency == 'daily' else 24
-        self.table = 'btc_daily' if frequency == 'daily' else 'btc_hourly'
-
-    def get_request(self):
-        """
-        Sends and returns response.
-        :return: response
-        """
-        params = {
-            'fsym': 'BTC',                                                          # coin symbol
-            'tsym': 'USD',                                                          # currency symbol to convert to
-            'limit': self.limit,                                                    # number of data points
-        }
-        headers = {
-            'accept': 'application/json',
-            'authorization': f'Apikey {self.api_key}'
-        }
-        response = requests.get(url=self.url, headers=headers, params=params)
-        if not response:
-            raise Exception(f'BAD RESPONSE: '
-                            f'\nSTATUS: {response.status_code}\nMESSAGE: {response.json()}'
-                            f'\nREQ URL: {response.url}')
-        return response
-
-    def _insert_to_db(self, parsed_response):
-        """
-        Creates list of tuples and inserts it to database"
-        :param parsed_response: list, parsed response
-        """""
-        query = f"""
-            INSERT INTO {self.table} 
-            (
-            TIME_STAMP, HIGH, LOW, OPEN_, VOLUME_FROM, VOLUME_TO, CLOSE_
-            ) VALUES %s;
-        """
-        rows = [tuple(hour.values()) for hour in parsed_response]
-        insert_to_db(rows, query=query)
-        print(f'{len(rows)} have been inserted to {self.frequency}.')
-
-    def parse_response(self, response):
-        """
-        Parses response, saves response to db by calling _insert_to_db method
-        :param response:
-        :return:
-        """
-        res = response.json()
-        data = res.get('Data', {}).get('Data', None)
-        if data is None:
-            raise Exception('Data is None')
-        parsed = []
-        for point in data:
-            dp = {k: v for k, v in point.items() if k in ('time', 'high', 'low', 'open', 'volumefrom',
-                                                          'volumeto', 'close')}
-            parsed.append(dp)
-        self._insert_to_db(parsed)
-        return parsed
-
-    def extract_bitcoin(self):
-        print(f'Requesting BitCoin {self.frequency} Data...')
-        response = self.get_request()
-        print(f'RESPONSE STATUS: {response.status_code}')
-        self.parse_response(response)
-        print(f'Process finished.\n')
+import yfinance as yf
 
 
 class TweetRetriever:
@@ -414,3 +334,124 @@ class TweetRetriever:
                           f' and {self.END_TIME} from {target_handle} have been extracted.')
                     break
         print(f'Process finished.\nTOTAL NUMBER OF EXTRACTED TWEETS: {self._TWEETS_EXTRACTED}')
+
+
+class BtcDailyYahoo:
+    """
+    Extracts tweets on daily basis from yahoo, writes them to db
+    """
+    def __init__(self, period='1d', interval='1d'):
+        self.period = period
+        self.interval = interval
+
+    @staticmethod
+    def parse_response(response: pd.DataFrame):
+        rows = response.loc[:, :].values.tolist()
+        rows_to_insert = [tuple(row) for row in rows]
+        return rows_to_insert
+
+    @staticmethod
+    def _insert_to_db(rows_to_insert):
+        query = """
+        INSERT INTO btc_daily
+            (
+            DATE_, 
+            OPEN_, 
+            HIGH, 
+            LOW, 
+            CLOSE_, 
+            ADJ_CLOSE, 
+            VOLUME
+            ) VALUES %s;
+        """
+        insert_to_db(rows_to_insert, query=query)
+        print(f'{len(rows_to_insert)} have been inserted to btc_daily')
+
+    def extract_btc(self):
+        btc_daily = yf.download(tickers='BTC-USD', period=self.period, interval=self.interval)
+        btc_daily.reset_index(inplace=True)
+        rows_to_insert = self.parse_response(btc_daily)
+        self._insert_to_db(rows_to_insert)
+        print('Process Finished')
+
+
+class BtcExtractor:
+    """
+    Extracts hourly data for BTC, saves it to database.
+    https://min-api.cryptocompare.com/documentation
+    API allows up to 100,000 free calls per month.
+    Class should not make more calls than (31 days * 24 hours) = 720
+    """
+    def __init__(self, api_key, frequency='hourly'):
+        """
+        Constructor
+        :param api_key: str, api key from CompareCrypto (it's free)
+        :param frequency: str, ['hourly', 'daily']
+        """
+        self.api_key = api_key
+        self.frequency = frequency
+        self.url = 'https://min-api.cryptocompare.com/data/v2/histohour?' if frequency == 'hourly' \
+            else 'https://min-api.cryptocompare.com/data/v2/histoday?'
+        self.limit = 24 if frequency == 'hourly' else 1
+        self.table = 'btc_hourly' if frequency == 'daily' else 'btc_daily'
+
+    def get_request(self):
+        """
+        Sends and returns response.
+        :return: response
+        """
+        params = {
+            'fsym': 'BTC',                                                          # coin symbol
+            'tsym': 'USD',                                                          # currency symbol to convert to
+            'limit': self.limit,                                                    # number of data points
+        }
+        headers = {
+            'accept': 'application/json',
+            'authorization': f'Apikey {self.api_key}'
+        }
+        response = requests.get(url=self.url, headers=headers, params=params)
+        if not response:
+            raise Exception(f'BAD RESPONSE: '
+                            f'\nSTATUS: {response.status_code}\nMESSAGE: {response.json()}'
+                            f'\nREQ URL: {response.url}')
+        return response
+
+    def _insert_to_db(self, parsed_response):
+        """
+        Creates list of tuples and inserts it to database"
+        :param parsed_response: list, parsed response
+        """""
+        query = f"""
+            INSERT INTO {self.table} 
+            (
+            TIME_STAMP, HIGH, LOW, OPEN_, VOLUME_FROM, VOLUME_TO, CLOSE_
+            ) VALUES %s;
+        """
+        rows = [tuple(hour.values()) for hour in parsed_response]
+        insert_to_db(rows, query=query)
+        print(f'{len(rows)} have been inserted to {self.frequency}.')
+
+    def parse_response(self, response):
+        """
+        Parses response, saves response to db by calling _insert_to_db method
+        :param response:
+        :return:
+        """
+        res = response.json()
+        data = res.get('Data', {}).get('Data', None)
+        if data is None:
+            raise Exception('Data is None')
+        parsed = []
+        for point in data:
+            dp = {k: v for k, v in point.items() if k in ('time', 'high', 'low', 'open', 'volumefrom',
+                                                          'volumeto', 'close')}
+            parsed.append(dp)
+        self._insert_to_db(parsed)
+        return parsed
+
+    def extract_bitcoin(self):
+        print(f'Requesting BitCoin {self.frequency} Data...')
+        response = self.get_request()
+        print(f'RESPONSE STATUS: {response.status_code}')
+        self.parse_response(response)
+        print(f'Process finished.\n')
