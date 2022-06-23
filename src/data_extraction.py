@@ -63,7 +63,7 @@ class TweetRetriever:
         self.ACCESS_TOKEN = access_token
         self.ACCESS_TOKEN_SECRET = access_token_secret
         self.BEARER_TOKEN = bearer_token
-        self.START_TIME = period.strftime(self.dateformat_)
+        self.START_TIME = (period - timedelta(hours=24)).strftime(self.dateformat_)
         self.query_year = period.year
         self.query_month = period.month
         self.query_day = period.day
