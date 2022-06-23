@@ -30,4 +30,4 @@ PASSWORD = os.environ['PASSWORD']
 HOST = os.environ['HOST']
 PORT = os.environ['PORT']
 
-TARGET_ACCOUNTS = ['BitcoinMagazine', 'CoinDesk', 'Bitcoin', 'BT']
+TARGET_ACCOUNTS = ['BitcoinMagazine', 'CoinDesk', 'Bitcoin', 'BT', 'binance', 'cz_binance']
