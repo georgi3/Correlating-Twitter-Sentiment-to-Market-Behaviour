@@ -2,10 +2,10 @@ from datetime import datetime
 import time
 import pandas as pd
 from apscheduler.schedulers.background import BackgroundScheduler
-from src.config import *
-from src.data_extraction import TweetRetriever, BtcDailyYahoo, BtcExtractor
-from src.preprocessing import text_pipe
-from src.db_handler import insert_to_db, retrieve_from_last_period
+from config import *
+from data_extraction import TweetRetriever, BtcDailyYahoo, BtcExtractor
+from preprocessing import text_pipe
+from db_handler import insert_to_db, retrieve_from_last_period
 
 
 preprocess_query = """
