@@ -2,11 +2,10 @@ import time
 import pandas as pd
 import tweepy
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from tweepy.errors import TweepyException, NotFound
-from src.data_managing.db_handler import insert_to_db
+from db_handler import insert_to_db, retrieve_data, QUERIES
 import yfinance as yf
-from common_queries import QUERIES
 
 
 class TweetRetriever:
@@ -20,33 +19,22 @@ class TweetRetriever:
         ```py
         # call it every hour
         tweets_start_time = datetime.datetime.now() - datetime.timedelta(hours=12)
-        comments_start_time = datetime.datetime.now() - datetime.timedelta(hours=1)
+        comments_start_time = datetime.datetime.now() - datetime.timedelta(hours=1, seconds=30)
+        end_time = datetime.datetime.now() - datetime.timedelta(seconds=30)
         start_time = datetime(year=2022, month=6, day=11, hour=1, minute=0, second=1)               # start date
         get_tweets = TweetRetriever(TARGET_ACCOUNTS, API_KEY, API_SECRET_KEY,                       # instantiate object
                                     ACCESS_TOKEN, ACCESS_TOKEN_SECRET,BEARER_TOKEN)
-        get_tweets.extract_tweets(tweets_start_time, comments_start_time, include_comments=True)    # extract tweets
+        get_tweets.extract_tweets(tweets_start_time, comments_start_time, end_time,                 # extract tweets
+                                    include_comments=True)    # extract tweets
         ```
-    Usage Example for the period in the past:
-        ```py
-        dateformat_ = '%Y-%m-%dT%H:%M:%SZ'
-        start_time = datetime(year=2022, month=6, day=11, hour=1, minute=0, second=1)   # start time
-        end_time = datetime(year=2022, month=6, day=12, hour=1, minute=0, second=0)     # end time
-        end_time = end_time.strftime(dateformat_)                                       # convert to string (only end)
-
-        get_tweets = TweetRetriever(TARGET_ACCOUNTS, API_KEY,
-                                    API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET,  # instantiate object
-                                     BEARER_TOKEN)
-        get_tweets.END_TIME = end_time                                                  # set end time
-        get_tweets.extract_tweets(start_time, start_time, include_comments=True)        # extract tweets
     """
     dateformat_ = '%Y-%m-%dT%H:%M:%SZ'
-    end_time_ = datetime.now() - timedelta(seconds=30)
-    END_TIME = end_time_.strftime(dateformat_)                               # Retrieve tweets up to last 60 sec
 
     REQUEST_LIMIT = 450                                                      # per 15 min
     _REQUEST_COUNT = 0                                                       # resets to 0 every 450 requests
     _TOTAL_REQUESTS = 0                                                      # total number of requests
     _TWEETS_EXTRACTED = 0                                                    # total number of tweets/comments extracted
+    _GRAND_TOTAL = 0                                                         # total number per instance
 
     def __init__(self, target_accounts, api_key, api_secret_key, access_token,
                  access_token_secret, bearer_token):
@@ -96,12 +84,12 @@ class TweetRetriever:
             return user.id
         return
 
-    def get_tweets(self, user_id, start_time, next_token=None):
+    def get_tweets(self, user_id, start_time, end_time, next_token=None):
         """Endpoint for retrieving tweets from user's timeline."""
         url = f'https://api.twitter.com/2/users/{user_id}/tweets?'
         params = {
             'start_time': start_time,
-            'end_time': self.END_TIME,                                        # defaults to now() - 30s
+            'end_time': end_time,                                        # defaults to now() - 30s
             'expansions': 'author_id',
             'tweet.fields': 'author_id,created_at,conversation_id,in_reply_to_user_id,text,public_metrics',
             'user.fields': 'name,username,created_at,description,verified,public_metrics',
@@ -120,13 +108,13 @@ class TweetRetriever:
                             f'\nREQ URL: {response.url}\nNEXT_TOKE: {next_token}')
         return response
 
-    def get_replies_from_tweet(self, tweet_id, start_time, next_token=None):
+    def get_replies_from_tweet(self, tweet_id, start_time, end_time, next_token=None):
         """Endpoint for retrieving comments. Valid only for last 7 days!"""
         url = 'https://api.twitter.com/2/tweets/search/recent?'
         params = {
             'query': f'conversation_id:{tweet_id}',
             'start_time': start_time,
-            # 'end_time': self.END_TIME,                                        # defaults to now() - 60s
+            'end_time': end_time,                                        # defaults to now() - 30s
             'expansions': 'author_id',
             'tweet.fields': 'in_reply_to_user_id,author_id,created_at,conversation_id,public_metrics',
             'user.fields': 'name,username,created_at,description,verified,public_metrics',
@@ -224,7 +212,7 @@ class TweetRetriever:
             rows_to_insert.append(row)
         insert_to_db(rows_to_insert, query=query)
 
-    def _extract_comments(self, conversation_id, start_time):
+    def _extract_comments(self, conversation_id, start_time, end_time):
         """
         Takes a  tweet's ids and extracts all comments from it
         :param conversation_id: int, conversation id
@@ -239,7 +227,7 @@ class TweetRetriever:
             if self.reached_limit():
                 time.sleep(60*16)
 
-            target_response = self.get_replies_from_tweet(conversation_id, start_time, next_token=next_token)
+            target_response = self.get_replies_from_tweet(conversation_id, start_time, end_time, next_token=next_token)
             self._REQUEST_COUNT += 1
             self._TOTAL_REQUESTS += 1
 
@@ -263,14 +251,15 @@ class TweetRetriever:
                 print(f'All comments ({comments_per_tweet}) from the tweet have been extracted.')
                 break
 
-    def extract_tweets(self, tw_start_time, cm_start_time, include_comments=True):
+    def extract_tweets(self, tw_start_time, cm_start_time, end_time, include_comments=True):
         """
         Extracts tweets and comments from the target list up to specified date.
         NOTE: comments could be extracted only up last 7 days, unless you have premium api. However, for tweet only 3200
         most recent tweets could be retrieved
         :param tw_start_time: datetime.datetime, start time fot tweet search
         :param cm_start_time: datetime.datetime, start time fot comments search
-        :param include_comments:
+        :param end_time: datetime.datetime, end_time for the search
+        :param include_comments: bool, True to include comment search, False otherwise
         :return:
         """
         # Reset Counters & Settings
@@ -279,6 +268,7 @@ class TweetRetriever:
         self._TWEETS_EXTRACTED = 0
         tw_start_time = tw_start_time.strftime(self.dateformat_)
         cm_start_time = cm_start_time.strftime(self.dateformat_)
+        end_time = end_time.strftime(self.dateformat_)
 
         api = self.connect()
         self.connection_is_verified(api)
@@ -295,7 +285,7 @@ class TweetRetriever:
                 if self.reached_limit():
                     time.sleep(60*16)
 
-                target_response = self.get_tweets(target_id, tw_start_time, next_token=next_token)
+                target_response = self.get_tweets(target_id, tw_start_time, end_time, next_token=next_token)
                 self._REQUEST_COUNT += 1
                 self._TOTAL_REQUESTS += 1
 
@@ -319,7 +309,7 @@ class TweetRetriever:
                     for tweet_info in tweets_dict.values():                         # passing tweets to extract comments
                         conversation_id = tweet_info.get('conversation_id', None)
                         if conversation_id:
-                            self._extract_comments(conversation_id, cm_start_time)
+                            self._extract_comments(conversation_id, cm_start_time, end_time)
                         else:
                             raise Exception('ERROR: could not find conversation in parsed data.')
 
@@ -327,7 +317,10 @@ class TweetRetriever:
                 if next_token is None:
                     print(f'All tweets ({tweets_per_handle}) from {target_handle} have been extracted.')
                     break
-        print(f'Process finished.\nTOTAL NUMBER OF EXTRACTED TWEETS: {self._TWEETS_EXTRACTED}')
+        db_count = retrieve_data('SELECT COUNT(DISTINCT tweet_id) FROM raw_tweets_info')[0][0]
+        self._GRAND_TOTAL += self._TWEETS_EXTRACTED
+        print(f'Process finished.\nTOTAL NUMBER OF EXTRACTED TWEETS THIS SESSION: {self._TWEETS_EXTRACTED}\n\n'
+              f'GRAND TOTAL: {self._GRAND_TOTAL}\nEFFICIENCY: {db_count/self._GRAND_TOTAL}%\n\n')
 
 
 class BtcExtractorYahoo:
@@ -342,13 +335,15 @@ class BtcExtractorYahoo:
         btc_extractor = BtcExtractorYahoo(period='1h', interval='1h')
         btc_extractor.extract_btc()
     ```
+    NOTE: HOURLY is not implemented because it does not work properly with Yahoo!
     Parameters
     :param period: str ['1d', '1h']
     :param interval: str ['1d', '1h']
     """
-    def __init__(self, period, interval):
+    def __init__(self, period='1d', interval='1d'):
         self.period = period
         self.interval = interval
+        self._daily = True
 
     @staticmethod
     def parse_response(response: pd.DataFrame):
@@ -357,14 +352,90 @@ class BtcExtractorYahoo:
         return rows_to_insert
 
     @staticmethod
-    def _insert_to_db(rows_to_insert, hourly=True):
-        query = QUERIES['btc_hourly_info']['upsert'] if hourly else QUERIES['btc_daily_info']['upsert']
+    def _insert_to_db(rows_to_insert, daily=True):
+        query = QUERIES['btc_daily_info']['upsert'] if daily else QUERIES['btc_hourly_info']['upsert']
         insert_to_db(rows_to_insert, query=query)
         print(f'{len(rows_to_insert)} have been inserted to btc_daily')
 
     def extract_btc(self):
+        print(f'Extracting BTC for the period {self.period} with interval of {self.interval}.\n')
         btc_daily = yf.download(tickers='BTC-USD', period=self.period, interval=self.interval)
         btc_daily.reset_index(inplace=True)
         rows_to_insert = self.parse_response(btc_daily)
-        self._insert_to_db(rows_to_insert)
+        self._insert_to_db(rows_to_insert, daily=self._daily)
         print('Process Finished')
+
+
+class BtcExtractorCC:
+    """
+    Extracts hourly data for BTC, saves it to database.
+    https://min-api.cryptocompare.com/documentation
+    API allows up to 100,000 free calls per month.
+    Class should not make more calls than (31 days * 24 hours) = 720
+    """
+    def __init__(self, api_key, frequency='hourly'):
+        """
+        Constructor
+        :param api_key: str, api key from CompareCrypto (it's free)
+        :param frequency: str, ['hourly', 'daily'] (daily is not configured)
+        """
+        self.api_key = api_key
+        self.frequency = frequency
+        self.url = 'https://min-api.cryptocompare.com/data/v2/histohour?'
+        self.limit = 1
+
+    def get_request(self):
+        """
+        Sends and returns response.
+        :return: response
+        """
+        params = {
+            'fsym': 'BTC',                                                          # coin symbol
+            'tsym': 'USD',                                                          # currency symbol to convert to
+            'limit': self.limit,                                                    # number of data points
+        }
+        headers = {
+            'accept': 'application/json',
+            'authorization': f'Apikey {self.api_key}'
+        }
+        response = requests.get(url=self.url, headers=headers, params=params)
+        if not response:
+            raise Exception(f'BAD RESPONSE: '
+                            f'\nSTATUS: {response.status_code}\nMESSAGE: {response.json()}'
+                            f'\nREQ URL: {response.url}')
+        return response
+
+    def _insert_to_db(self, parsed_response):
+        """
+        Creates list of tuples and inserts it to database"
+        :param parsed_response: list, parsed response
+        """
+        rows = [tuple(hour.values()) for hour in parsed_response]
+        insert_to_db(rows, query=QUERIES['btc_hourly_info']['upsert'])
+        print(f'{len(rows)} have been inserted to {self.frequency}.')
+
+    def parse_response(self, response):
+        """
+        Parses response, saves response to db by calling _insert_to_db method
+        :param response:
+        :return:
+        """
+        res = response.json()
+        data = res.get('Data', {}).get('Data', None)
+        if data is None:
+            raise Exception('Data is None')
+        parsed = []
+        for point in data:
+            dp = {k: v for k, v in point.items() if k in ('time', 'high', 'low', 'open', 'volumefrom',
+                                                          'volumeto', 'close')}
+            dp['time'] = datetime.fromtimestamp(dp['time']).strftime('%Y-%m-%d %T')
+            parsed.append(dp)
+        self._insert_to_db(parsed)
+        return parsed
+
+    def extract_bitcoin(self):
+        print(f'Requesting BitCoin {self.frequency} Data...')
+        response = self.get_request()
+        print(f'RESPONSE STATUS: {response.status_code}')
+        self.parse_response(response)
+        print(f'Process finished.\n')
