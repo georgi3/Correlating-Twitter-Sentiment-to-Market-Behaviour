@@ -7,7 +7,8 @@ from config import USER, DATABASE, PASSWORD, PORT, HOST
 def create_connection():
     """Connects to db server"""
     try:
-        connection = psycopg2.connect(user=USER, database=DATABASE, host=HOST, port=PORT, password=PASSWORD)
+        connection = psycopg2.connect(user=USER, database=DATABASE, host=HOST, port=PORT, password=PASSWORD,
+                                      sslmode='require')
         cursor = connection.cursor()
     except (Exception, DatabaseError) as err:
         raise Exception(f'Could not connect to server: {err}')
