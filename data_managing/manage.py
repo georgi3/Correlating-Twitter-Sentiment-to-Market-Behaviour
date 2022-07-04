@@ -5,7 +5,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from config import *
 from data_extraction import TweetRetriever, BtcExtractorYahoo, BtcExtractorCC
 from preprocessing import text_pipe
-from db_handler import insert_to_db, retrieve_data, create_table, QUERIES
+from db_handler import insert_to_db, retrieve_data, create_table, create_connection, QUERIES
+
+# CHECK DB CONNECTION
+if create_connection():
+    print('Successful Connection to DataBase!')
+else:
+    raise Exception('ERROR: Could NOT connect to the database!')
 
 # CREATE TABLES
 for table in QUERIES.values():
