@@ -1,4 +1,5 @@
 import datetime
+from datetime import timedelta
 import time
 import pandas as pd
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -84,11 +85,11 @@ if __name__ == '__main__':
     hourly_btc_extractor = BtcExtractorCC(CC_API_KEY)
     scheduler = BackgroundScheduler(timezone='US/Eastern')
     scheduler.add_job(extract_tweets_hourly, 'interval', hours=1, kwargs={'extractor': tweet_extractor},
-                      next_run_time=datetime.datetime.now())
+                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
     scheduler.add_job(extract_btc_hourly, 'interval', hours=1, kwargs={'extractor': hourly_btc_extractor},
-                      next_run_time=datetime.datetime.now())
+                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
     scheduler.add_job(extract_btc_daily, 'interval', hours=24, kwargs={'extractor': daily_btc_extractor},
-                      next_run_time=datetime.datetime.now())
+                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
     scheduler.start()
     print(F'Press Ctrl+C to exit')
 
