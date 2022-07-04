@@ -21,12 +21,12 @@ ACCESS_TOKEN = os.environ['ACCESS_TOKEN_PR']
 ACCESS_TOKEN_SECRET = os.environ['ACCESS_TOKEN_SECRET_PR']
 
 # CompareCrypto API Key
-CC_API_KEY = os.environ['CP_API_KEY']
+CC_API_KEY = os.environ['CC_API_KEY']
 
 # DATABASE
 DATABASE = os.environ['DATABASE']
-USER = os.environ['DB_USER']
-PASSWORD = os.environ['PASSWORD']
+USER = os.environ['DB_USERNAME']
+PASSWORD = os.environ['DB_PASSWORD']
 HOST = os.environ['HOST']
 PORT = os.environ['PORT']
 
