@@ -23,7 +23,7 @@ def create_table(query):
         cursor.execute(query)
         connection.commit()
         cursor.close()
-        print(f'Table "{query.split()[2]}" has been successfully created!')
+        print(f'Table "{query.split()[5]}" has been successfully created!')
     except (Exception, DatabaseError) as err:
         print(f'Failed to create table: {err}')
     finally:
