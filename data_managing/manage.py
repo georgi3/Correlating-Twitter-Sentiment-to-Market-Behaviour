@@ -79,17 +79,14 @@ def extract_btc_hourly(extractor):
 
 
 if __name__ == '__main__':
-    tweet_extractor = TweetRetriever(TARGET_ACCOUNTS, API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET,
-                                     BEARER_TOKEN)
+    tweet_extractor = TweetRetriever(TARGET_ACCOUNTS, API_KEY, API_SECRET_KEY, ACCESS_TOKEN,
+                                     ACCESS_TOKEN_SECRET, BEARER_TOKEN)
     daily_btc_extractor = BtcExtractorYahoo(period='2d', interval='1d')
     hourly_btc_extractor = BtcExtractorCC(CC_API_KEY)
     scheduler = BackgroundScheduler(timezone='US/Eastern')
-    scheduler.add_job(extract_tweets_hourly, 'interval', hours=1, kwargs={'extractor': tweet_extractor},
-                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
-    scheduler.add_job(extract_btc_hourly, 'interval', hours=1, kwargs={'extractor': hourly_btc_extractor},
-                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
-    scheduler.add_job(extract_btc_daily, 'interval', hours=24, kwargs={'extractor': daily_btc_extractor},
-                      next_run_time=datetime.datetime.now()+timedelta(minutes=1))
+    scheduler.add_job(extract_tweets_hourly, 'interval', hours=1, kwargs={'extractor': tweet_extractor})
+    scheduler.add_job(extract_btc_hourly, 'interval', hours=1, kwargs={'extractor': hourly_btc_extractor})
+    scheduler.add_job(extract_btc_daily, 'interval', hours=24, kwargs={'extractor': daily_btc_extractor})
     scheduler.start()
     print(F'Press Ctrl+C to exit')
 
