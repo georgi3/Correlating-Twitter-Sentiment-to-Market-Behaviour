@@ -248,9 +248,9 @@ def drop_spam_filter_3(dataframe):
     df = dataframe.copy(deep=True)
     column = TEXT
     df = df[~df[column].isin(df[column].value_counts().loc[lambda count: count > 2].index)]              # identical > 2
-    df = df[~df[column].str.contains('|'.join(                                            # identical up to last 5 chars
-        [re.escape(pattern) for pattern in
-         df[column].str[:-5].value_counts().loc[lambda count: count > 2].index.tolist()]))]
+    df['txt-5'] = df[column].str[:-5]
+    df = df.loc[~(df['txt-5'].isin(df['txt-5'].value_counts().
+                                   loc[lambda count: count > 2].index))]                  # identical up to last 5 chars
 
     df['word_uniqueness_%'] = df.text.str.split().map(lambda row: round(len(set(row)) / len(row) * 100))
     df = df.loc[df['word_uniqueness_%'] > 53]                               # keep tweets if only % of unique words > 53
