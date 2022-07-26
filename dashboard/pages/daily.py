@@ -1,118 +1,180 @@
 import pandas as pd
+import json
 import dash
-from dash import html, dcc, Output, Input, callback
-import plotly.express as px
+from dash import html, dcc, Output, Input, callback, dash_table
 
 from data_managing.db_handler import retrieve_data
 from src.archive.data_managing.preprocessing import daily_pipe
-from dashboard.other.supporting_scripts import generate_html_table, query_df, get_dataframe
+from dashboard.other.supporting_scripts import query_df, get_dataframe, parse_input, plot_sentiment_btc_timeseries, \
+    plot_volume_tweet_count_timeseries, plot_correlation_heatmap, plot_pie_chart, create_dash_table
 from dashboard.other.settings import ACCOUNTS, TS_DROPDOWN_OPTIONS_X, TS_DROPDOWN_OPTIONS_Y, HM_DROPDOWN_OPTIONS,\
-    ACC_MAP
+    DROPDOWN_SENTIMENT
 
 dash.register_page(__name__, path='/daily-analysis/')
 
 
 @callback(
-    Output('daily-timeseries', 'figure'),
-    Input('sources_checklist', 'value'),
-    Input('ts-dropdown-y', 'value'),
-    Input('ts-dropdown-x', 'value')
+    Output('datatable_div', 'children'),
+    Input('corr_with_value', 'data'),
 )
-def plot_time_series(sources, y_value_1, y_value_2):
-    global data_tweets, btc_daily
-    filtered_tweets = query_df(data_tweets, sources)
-    data = daily_pipe(filtered_tweets, btc_daily)
-    y_values = [y_value_1, y_value_2]
-    fig = px.line(data_frame=data, x=data.index, y=y_values,
-                  title=f'Timeseries for {y_value_1} and {y_value_2}')
-    return fig
+def datatable(session_storage):
+    df = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+    return create_dash_table(df)
+
+
+@callback(
+    Input
+)
+
+
+@callback(
+    Output('pie-fig', 'figure'),
+    Input('datatable', 'selected_rows'),
+    Input('corr_with_value', 'data'),
+)
+def pie_chart(indices, session_storage):
+    dataframe = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+    _, checked_sources = parse_input(dataframe, indices)
+    return plot_pie_chart(dataframe, checked_sources)
+
+
+@callback(
+    Output('daily-timeseries', 'figure'),
+    Input('ts-dropdown-y', 'value'),
+    Input('ts-dropdown-y', 'options'),
+    Input('ts-dropdown-x', 'value'),
+    Input('ts-dropdown-x', 'options'),
+    Input('rolling-window', 'value'),
+    Input('filtered_data_storage', 'data'),
+)
+def sentiment_btc_timeseries(y_value_1, y_label_1, y_value_2, y_label_2, window, filtered_data):
+    label_1, label_2 = y_label_1[y_value_1], y_label_2[y_value_2]
+    data = pd.read_json(json.loads(filtered_data)['filtered_df'], orient='split')
+    return plot_sentiment_btc_timeseries(data, y_value_1, label_1, y_value_2, label_2, window)
 
 
 @callback(
     Output('daily-volume', 'figure'),
-    Input('sources_checklist', 'value'),
+    Input('datatable', 'selected_rows'),
+    Input('corr_with_value', 'data'),
+    Input('filtered_data_storage', 'data'),
 )
-def plot_volume_vs_tweet_count(sources):
-    global data_tweets, btc_daily
-    filtered_tweets = query_df(data_tweets, sources)
-    data = daily_pipe(filtered_tweets, btc_daily)
-    sources = [ACC_MAP[source] for source in sources]
-    y_values = ['tweet_count_norm', 'volume_norm']
-    fig = px.line(data, x=data.index, y=y_values,
-                  title=f'Timeseries for Normalised BTC Volume and Tweet Count from {sources}')
-    return fig
+def volume_vs_tweet_count(indices, session_storage, filtered_data):
+    dataframe = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+    accounts_ids, _ = parse_input(dataframe, indices)
+    data = pd.read_json(json.loads(filtered_data)['filtered_df'], orient='split')
+    sources = [ACCOUNTS[source] for source in accounts_ids]
+    return plot_volume_tweet_count_timeseries(data, sources)
 
 
 @callback(
     Output('daily-heatmap', 'figure'),
-    Input('sources_checklist', 'value')
+    Input('hm-dropdown', 'value'),
+    Input('filtered_data_storage', 'data'),
 )
-def plot_heat_map(sources):
-    global data_tweets, btc_daily
-    filtered_tweets = query_df(data_tweets, sources)
-    data = daily_pipe(filtered_tweets, btc_daily)
-    columns = ['close_price', 'open_price', 'high_price', 'low_price',
-               'avg_vader_compound', 'avg_tb_subjectivity', 'avg_tb_polarity']  # , 'volume', 'tweet_count']
-    corr = data[columns].corr(method='pearson')
-    fig = px.imshow(corr, title='Correlations')
-    return fig
-
-
-def acc_corr_table(corr_with='avg_vader_compound'):
-    global data_tweets, btc_daily
-    corr_dict = {
-        'Account': [],
-        'BTC Close Corr': [],
-        'BTC Open Corr': [],
-        'BTC High Corr': [],
-        'BTC Low Corr': [],
-        'Tweet&Comment Count': []
-    }
-    cols = ['close_price', 'open_price', 'high_price', 'low_price']
-    for acc in ACCOUNTS:
-        filtered_tweets = query_df(data_tweets, [acc['value']])
-        df = daily_pipe(filtered_tweets, btc_daily)
-        corr = df[cols].corrwith(df[corr_with], ).apply(lambda x: round(x, 3)).to_dict()
-        corr_dict['Account'].append(acc['label'])
-        corr_dict['BTC Close Corr'].append(corr['close_price'])
-        corr_dict['BTC Open Corr'].append(corr['high_price'])
-        corr_dict['BTC High Corr'].append(corr['open_price'])
-        corr_dict['BTC Low Corr'].append(corr['low_price'])
-        corr_dict['Tweet&Comment Count'].append(df['tweet_count'].sum())
-
-    return pd.DataFrame(corr_dict).sort_values(by='BTC Close Corr', ascending=False)
+def heatmap(values, filtered_data):
+    data = pd.read_json(json.loads(filtered_data)['filtered_df'], orient='split')
+    return plot_correlation_heatmap(data, values)
 
 
 @callback(
-    Output('daily-bar_chart', 'figure'),
-    Input('sources_checklist', 'value')
+    Output('corr_with_value', 'data'),
+    Input('sentiment_table_dd', 'value')
 )
-def plot_tweet_count(sources):
-    global data_tweets, btc_daily
-    filtered_tweets = query_df(data_tweets, sources)
+def store_corr_with(corr_with):
+    dataframe = acc_corr_table(corr_with)
+    data = {
+        'corr_with': corr_with,
+        'dataframe': dataframe.to_json(date_format='iso', orient='split'),
+    }
+    return json.dumps(data)
+
+
+@callback(
+    Output('filtered_data_storage', 'data'),
+    Input('datatable', 'selected_rows'),
+    Input('corr_with_value', 'data')
+)
+def store_df_for_selected_sources(indices, session_storage):
+    dataframe = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+    accounts_ids, _ = parse_input(dataframe, indices)
+    filtered_tweets = query_df(data_tweets, accounts_ids)
     data = daily_pipe(filtered_tweets, btc_daily)
-    sources = [ACC_MAP[source] for source in sources]
-    fig = px.bar(data, x=data.index, y='tweet_count',
-                 title=f'Tweet Count per Day from {tuple(sources)}')
-    return fig
+    data_to_store = {
+        'filtered_df': data.to_json(date_format='iso', orient='split')
+    }
+    return json.dumps(data_to_store)
 
 
-data_tweets, btc_daily = get_dataframe()
+def acc_corr_table(corr_with):
+    global data_tweets, btc_daily
+    corr_dict = {
+        'Account': [],
+        'Account_Name': [],
+        'BTC Close': [],
+        'BTC Open': [],
+        'BTC High': [],
+        'BTC Low': [],
+        'Count': [],
+    }
+    cols = ['close_price', 'open_price', 'high_price', 'low_price']
+    for id_, label in ACCOUNTS.items():
+        filtered_tweets = query_df(data_tweets, [id_])
+        df = daily_pipe(filtered_tweets, btc_daily)
+        corr = df[cols].corrwith(df[corr_with], ).apply(lambda x: round(x, 3)).to_dict()
+        corr_dict['Account'].append(f'[{label}](https://twitter.com/{label})')
+        corr_dict['Account_Name'].append(f'{label}')
+        corr_dict['BTC Close'].append(corr['close_price'])
+        corr_dict['BTC Open'].append(corr['high_price'])
+        corr_dict['BTC High'].append(corr['open_price'])
+        corr_dict['BTC Low'].append(corr['low_price'])
+        corr_dict['Count'].append(df['tweet_count'].sum())
+    return pd.DataFrame(corr_dict).sort_values(by='BTC Close', ascending=False)
+
+from dashboard.other.serialization import read_serialized
+# data_tweets, btc_daily = get_dataframe()
+data_tweets, btc_daily = read_serialized('data_tweets'), read_serialized('btc_daily')
 
 layout = html.Div([
     html.Div(children=[
-        html.H4('Table'),
-        generate_html_table(acc_corr_table()),
-        html.Label('Twitter Sources'),
-        dcc.Checklist(
-            id='sources_checklist',
-            options=ACCOUNTS,
-            value=['902926941413453824'],
-            inline=False
-        ),
         html.Div(
             [
-                # html.H4('BTC_Close_Normalised vs -'),
+                html.P("Select:"),
+                dcc.Dropdown(
+                    options=DROPDOWN_SENTIMENT,
+                    placeholder='Average VADER Compound per Day',
+                    id="sentiment_table_dd",
+                    value='avg_vader_compound_norm',
+                    clearable=False,
+                ),
+            ],
+            style={'width': '48%', 'display': 'inline-block'}),
+        html.Div(id='datatable_div'),
+        # html.Div(children=[
+        #     dash_table.DataTable(
+        #         id='datatable',
+        #         columns=[
+        #             {'name': i, 'id': i, 'presentation': 'markdown'} if i == 'Account'
+        #             else {'name': i, 'id': i} for i in dataframe.columns
+        #         ],
+        #         data=dataframe.to_dict('records'),
+        #         # filter_action='native',
+        #         sort_action='native',
+        #         sort_mode='multi',
+        #         row_selectable='multi',
+        #         selected_rows=[0],
+        #         # selected_row_ids=[],  # https://github.com/plotly/dash/issues/185 BUG (returns [None, None, ...])
+        #         page_action='native',
+        #         tooltip={i: {'value': i, 'use_with': 'header'} for i in dataframe.columns},
+        #         markdown_options={'html': False},
+        #         # page_current=0,
+        #         # page_count=11,
+        #     ),
+        #     # html.Div(id='data')
+        # ]),
+        dcc.Graph(id='pie-fig'),
+        html.Div(
+            [
                 html.P("Select:"),
                 dcc.Dropdown(
                     options=TS_DROPDOWN_OPTIONS_X,
@@ -134,18 +196,32 @@ layout = html.Div([
             ),
         ],
             style={'width': '48%', 'display': 'inline-block'}),
+        html.Div([
+            html.Label('Rolling Mean K'),
+            dcc.Input(
+                id='rolling-window',
+                type='number',
+                value=3,
+                min=2,
+            ),
+        ],
+            style={'width': '48%', 'display': 'inline-block'},
+        ),
         dcc.Graph(id="daily-timeseries"),
         dcc.Graph(id='daily-volume'),
         html.Div(children=[
             dcc.Dropdown(
+                id='hm-dropdown',
                 options=HM_DROPDOWN_OPTIONS,
-                # placeholder=
+                value=['close_price'],
+                multi=True
             )
         ]),
         dcc.Graph(id="daily-heatmap"),
-        dcc.Graph(id="daily-bar_chart"),
     ]
-    )
+    ),
+    dcc.Store(id='corr_with_value'),
+    dcc.Store(id='filtered_data_storage')
 ],
     style={'display': 'flex', 'flex-direction': 'row'},
 )
