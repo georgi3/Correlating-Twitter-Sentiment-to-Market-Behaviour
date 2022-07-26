@@ -22,12 +22,7 @@ def datatable(session_storage):
     return create_dash_table(df)
 
 
-@callback(
-    Input
-)
-
-
-@callback(
+g@callback(
     Output('pie-fig', 'figure'),
     Input('datatable', 'selected_rows'),
     Input('corr_with_value', 'data'),
