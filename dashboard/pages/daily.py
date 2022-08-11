@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import json
 import dash
-import time
-from dash import html, dcc, Output, Input, callback
+from dash import html, dcc, Output, Input, State, callback
 import dash_bootstrap_components as dbc
 from data_managing.db_handler import retrieve_data
 from dashboard.other.supporting_scripts import query_df, parse_input, plot_sentiment_btc_timeseries, \
@@ -14,27 +13,48 @@ from dashboard.other.settings import ACCOUNTS, TS_DROPDOWN_OPTIONS_X, TS_DROPDOW
 
 from src.archive.data_managing.preprocessing import daily_pipe
 
+# TODO: # 1. Add select all to datatable
+#       # 2. Add DataRange
+#       # 3. Add Styles
+
+
 dash.register_page(__name__, path='/daily-analysis/')
 
 
 @callback(
     Output('corr-table-daily', 'children'),
     Input('corr-table-storage', 'data'),
-    Input('filtered_data_storage', 'data'),
+    Input('close_error', 'n_clicks'),
+    State('not_selected_sources_error', 'is_open'),
+    State('filtered_data_storage', 'data'),
+    State('sentiment_table_daily', 'value'),
 )
-def datatable(session_storage, stored_data):
+def datatable(session_storage, error, modal_state, stored_data, corr_with):
+    """
+
+    :param session_storage:
+    :param error: arg is not used, works only as a callback trigger
+    :param modal_state:
+    :param stored_data:
+    :param corr_with:
+    :return:
+    """
+    df = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+    if modal_state:
+        return create_dash_table(df, [0])
     if stored_data is None:
         indices = [0]
     else:
-        indices = json.loads(stored_data)['selected_indices']
-    df = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
+        sources = json.loads(stored_data)['selected_sources']
+        indices_mapping = read_serialized('indices_mapping')
+        indices = [indices_mapping[corr_with]['names'][source] for source in sources]
     return create_dash_table(df, indices)
 
 
 @callback(
     Output('pie-chart-daily', 'figure'),
     Input('datatable', 'selected_rows'),
-    Input('corr-table-storage', 'data'),
+    State('corr-table-storage', 'data'),
 )
 def pie_chart(indices, session_storage):
     dataframe = pd.read_json(json.loads(session_storage)['dataframe'], orient='split')
@@ -76,17 +96,22 @@ def heatmap(values, filtered_data):
     return plot_correlation_heatmap(data, values)
 
 
-corr_with_values = [
-    'avg_vader_compound'
-    'avg_tb_subjectivity'
-    'avg_tb_polarity'
-]
+@callback(
+    Output('not_selected_sources_error', 'is_open'),
+    Input('datatable', 'selected_rows')
+)
+def toggle_error_modal(indices):
+    if indices:
+        return False
+    else:
+        return True
 
 
 # TODO Data Storing Related Functions
 @callback(
     Output('corr-table-storage', 'data'),
-    Output('corr-table-daily', 'className'),  # ClassName! (no update) https://github.com/plotly/dash/issues/1541
+    Output('corr-table-daily', 'className'),  # dummy output just to trigger the loading state on 'corr-table-daily'
+                                              # https://github.com/plotly/dash/issues/1541
     Input('sentiment_table_daily', 'value'),
 )
 def store_corr_with(corr_with):
@@ -100,21 +125,20 @@ def store_corr_with(corr_with):
 @callback(
     Output('filtered_data_storage', 'data'),
     Input('datatable', 'selected_rows'),
-    Input('corr-table-storage', 'data'),
+    State('corr-table-storage', 'data'),
 )
 def store_df_for_selected_sources(indices, session_storage):
-    # indices_mapping = read_serialized('indices_mapping')  # !!!!!!!!!!
-    print(indices)
-
+    if not indices:
+        indices = [0]
     data_tweets, btc_daily = read_serialized('data_tweets'), read_serialized('btc_daily')
     loaded_storage = json.loads(session_storage)
     dataframe = pd.read_json(loaded_storage['dataframe'], orient='split')
-    accounts_ids, _ = parse_input(dataframe, indices)
+    accounts_ids, acc_names = parse_input(dataframe, indices)
     filtered_tweets = query_df(data_tweets, accounts_ids)
     data = daily_pipe(filtered_tweets, btc_daily)
     data_to_store = {
         'filtered_df': data.to_json(date_format='iso', orient='split'),
-        'selected_indices': indices,
+        'selected_sources': acc_names,
     }
     return json.dumps(data_to_store)
 
@@ -179,7 +203,6 @@ def render_tab_2():
             html.Div(
                 id='ts-dropdown-x-d',
                 children=[
-                    # html.P("Select:"),
                     dcc.Dropdown(
                         options=TS_DROPDOWN_OPTIONS_X,
                         placeholder='Sentiment Analysis',
@@ -193,7 +216,6 @@ def render_tab_2():
             html.Div(
                 id='ts-dropdown-y-d',
                 children=[
-                    # html.P("Select:"),
                     dcc.Dropdown(
                         options=TS_DROPDOWN_OPTIONS_Y,
                         placeholder='Bitcoin Price',
@@ -248,6 +270,19 @@ def render_tab_content(tab_switch):
 layout = html.Div(
     id='dash-container',
     children=[
+        dbc.Modal(
+            children=[
+                dbc.ModalHeader(dbc.ModalTitle('Note:'), close_button=False),
+                dbc.ModalBody('At least one source has to be selected!'),
+                dbc.ModalFooter(
+                    dbc.Button('Ok', id='close_error', n_clicks=0)
+                ),
+            ],
+            id='not_selected_sources_error',
+            keyboard=False,
+            backdrop='static',
+        ),
+
         build_tabs(),
         html.Div(
             id='tab-content'
@@ -256,94 +291,3 @@ layout = html.Div(
         dcc.Store(id='filtered_data_storage'),
     ]
 )
-
-
-# def return_init_layout():
-#     return html.Div([
-#         html.Div(children=[
-#             html.Div(
-#                 id='datatable-div',
-#                 children=[
-#                     dcc.Dropdown(
-#                         options=DROPDOWN_SENTIMENT,
-#                         placeholder='Average VADER Compound per Day',
-#                         id="sentiment_table_daily",
-#                         value='avg_vader_compound_norm',
-#                         clearable=False,
-#                     ),
-#                     dcc.Loading(
-#                         id='loading-corr-table-daily',
-#                         type='circle',
-#                         fullscreen=True,
-#                         children=[
-#                             html.Div(id='corr-table-daily'),
-#                         ]
-#                     ),
-#                 ],
-#                 style={'width': '48%', 'display': 'inline-block'},
-#             ),
-#             dcc.Graph(id='pie-chart-daily'),
-#             ##        # COMPARISON CHARTS
-#             html.Div(
-#                 id='ts-dropdown-x-d',
-#                 children=[
-#                     html.P("Select:"),
-#                     dcc.Dropdown(
-#                         options=TS_DROPDOWN_OPTIONS_X,
-#                         placeholder='Sentiment Analysis',
-#                         id="ts-dropdown-x-daily",
-#                         value='avg_vader_compound_norm',
-#                         clearable=False,
-#                     ),
-#                 ],
-#                 style={'width': '48%', 'display': 'inline-block'}
-#             ),
-#             html.Div(
-#                 id='ts-dropdown-y-d',
-#                 children=[
-#                     html.P("Select:"),
-#                     dcc.Dropdown(
-#                         options=TS_DROPDOWN_OPTIONS_Y,
-#                         placeholder='Bitcoin Price',
-#                         id="ts-dropdown-y-daily",
-#                         value='close_price_norm',
-#                         clearable=False,
-#                     ),
-#                 ],
-#                 style={'width': '48%', 'display': 'inline-block'}
-#             ),
-#             html.Div(
-#                 children=[
-#                     html.Label('Rolling Mean K'),
-#                     dcc.Input(
-#                         id='rolling-window-daily',
-#                         type='number',
-#                         value=3,
-#                         min=2,
-#                     ),
-#                 ],
-#                 style={'width': '48%', 'display': 'inline-block'},
-#             ),
-#             dcc.Graph(id="ts-sentiment-btc-daily"),
-#             dcc.Graph(id='ts-volume-daily'),
-#             html.Div(
-#                 id='hm-dropdown-d',
-#                 children=[
-#                     dcc.Dropdown(
-#                         id='hm-dropdown',
-#                         options=HM_DROPDOWN_OPTIONS,
-#                         value=['close_price'],
-#                         multi=True
-#                     )
-#                 ]
-#             ),
-#             dcc.Graph(id="heatmap-daily"),
-#             dcc.Store(id='corr-table-storage'),
-#             dcc.Store(id='filtered_data_storage')
-#         ]
-#         ),
-#     ],
-#         style={'display': 'flex', 'flex-direction': 'row'},
-#     )
-
-# layout = return_init_layout()
