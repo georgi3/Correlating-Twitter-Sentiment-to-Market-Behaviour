@@ -1,28 +1,35 @@
 import dash
 from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
-from pages.side_bar import sidebar
 from dashboard.other.supporting_scripts import navbar
+from dashboard.other.supporting_scripts import get_dataframes, acc_corr_table
+from dashboard.other.serialization import serialize
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
-app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
-# app.layout = html.Div(
-#     children=[
-#         html.Div(
-#             [html.Div(dcc.Link(f"{page['name']} - {page['path']}", href=page['relative_path']))
-#                 for page in dash.page_registry.values() if not page['name'] in ['Not found 404']
-#             ]), dash.page_container]
-# )
+app = Dash(__name__,
+           use_pages=True,
+           external_stylesheets=[dbc.themes.BOOTSTRAP],
+           meta_tags=[
+               {
+                   "name": "viewport",
+                   "content": "width=device-width, initial-scale=1"
+               }
+           ])
+app.title = 'BTC vs Tweets'
+app.config['suppress_callback_exceptions'] = True
+
+
 header = dbc.Navbar(
     dbc.Container(
         [
             html.A(
                 dbc.Row(
-                    dbc.Col(dbc.NavbarBrand("Title", className="ms-2")),
+                    dbc.Col(dbc.NavbarBrand("Home", className="ms-2")),
                     align="center",
                     className="g-0",
                 ),
-                href=dash.page_registry['pages.daily']['relative_path'],
+                href=dash.page_registry['pages.home']['relative_path'],
                 style={"textDecoration": "none"},
             ),
             dbc.Row(
@@ -31,16 +38,12 @@ header = dbc.Navbar(
                     dbc.Collapse(
                         dbc.Nav(
                             [
-                                dbc.NavItem(dbc.NavLink("Home")),
-                                dbc.NavItem(dbc.NavLink("Page 1")),
-                                dbc.NavItem(
-                                    dbc.NavLink("Page 2"),
-                                    # add an auto margin after page 2 to
-                                    # push later links to end of nav
-                                    className="me-auto",
-                                ),
-                                dbc.NavItem(dbc.NavLink("Help")),
-                                dbc.NavItem(dbc.NavLink("About")),
+                                dbc.NavItem(dbc.NavLink("Daily",
+                                                        href=dash.page_registry['pages.daily']['relative_path'])),
+                                dbc.NavItem(dbc.NavLink("Hourly",
+                                                        href=dash.page_registry['pages.hourly']['relative_path'])),
+                                # dbc.NavItem(dbc.NavLink("Help")),
+                                # dbc.NavItem(dbc.NavLink("About")),
                             ],
                             # make sure nav takes up the full width for auto
                             # margin to get applied
@@ -60,9 +63,39 @@ header = dbc.Navbar(
     dark=True,
     color="blue",
 )
-#
 app.layout = html.Div(
     [header, dash.page_container]
 )
+
+
+corr_with_values = [
+    'avg_vader_compound',
+    'avg_tb_subjectivity',
+    'avg_tb_polarity',
+]
+
+
+def serialize_db():
+    data_tweets, btc_daily, btc_hourly = get_dataframes()
+    data_to_serialize = {
+        'data_tweets': data_tweets,
+        'btc_daily': btc_daily,
+        'btc_hourly': btc_hourly,
+    }
+    indices_mapping = dict()
+    for value in corr_with_values:
+        corr_table = acc_corr_table(value, data_tweets, btc_daily)
+        data_to_serialize[value] = corr_table
+        indices_mapping[value] = {
+            'indices': {i: name for i, name in zip(corr_table.index, corr_table.Account_Name)},
+            'names': {name: i for i, name in zip(corr_table.index, corr_table.Account_Name)}
+        }
+    data_to_serialize['indices_mapping'] = indices_mapping
+    serialize(**data_to_serialize)
+
+
 if __name__ == '__main__':
+    # task scheduler for df retrieval
+    scheduler = BackgroundScheduler(timezone='US/Eastern')
+    scheduler.add_job(serialize_db, 'interval', hours=1)
     app.run(debug=True)
