@@ -1,0 +1,35 @@
+#corr-table-d p {
+    margin-bottom: 0;
+    text-align : center;
+}
+#corr-table-d a:link {
+    text-decoration: none;
+    color: white;
+}
+#corr-table-d a {
+    vertical-align: text-top
+}
+#corr-table-d a:visited {
+  color: white;
+}
+#corr-table-d a:hover {
+  color: black;
+}
+
+#corr-table-h p {
+    margin-bottom: 0;
+    text-align : center;
+}
+#corr-table-h a:link {
+    text-decoration: none;
+    color: white;
+}
+#corr-table-h a {
+    vertical-align: text-top
+}
+#corr-table-h a:visited {
+  color: white;
+}
+#corr-table-h a:hover {
+  color: black;
+}
