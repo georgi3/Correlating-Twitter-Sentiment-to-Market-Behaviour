@@ -8,6 +8,7 @@
 * Scikit-Learn
 * Plotly
 * Flask
+* Dash
 ###### Process:
 1. Data Management:
    1. Extract tweets from Twitter target account per given interval => store it in raw tweets db
