@@ -31,7 +31,7 @@ def read_serialized(label: str):
     return dataframe
 
 
-def serialize_routine():
+def serialization_routine():
     """
     Function that is scheduled to run hourly. It serializes database with tweets abd BTC on hourly basis and does some
     computations in advance which are also serialized to speed up site speed.
