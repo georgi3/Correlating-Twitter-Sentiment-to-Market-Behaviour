@@ -120,18 +120,18 @@ def plot_sentiment_btc_timeseries(data, btc_price_kind, btc_label, sentiment_kin
                    mode='lines', line={'dash': 'solid', 'color': 'yellow'}),
         go.Scatter(x=data.index, y=data[btc_price_kind].rolling(window).mean(), name=f'{btc_label};'
                                                                                      f'<br> Rolling Window {window}',
-                   mode='lines', line={'dash': 'dash', 'color': 'yellow'}),
+                   mode='lines', line={'dash': 'dot', 'color': 'yellow'}),
         go.Scatter(x=data.index, y=data[sentiment_kind], name=f'{sentiment_label}',
                    mode='lines', line={'dash': 'solid', 'color': 'Orange'}),
         go.Scatter(x=data.index, y=data[sentiment_kind].rolling(window).mean(), name=f'{sentiment_label};'
                                                                                      f'<br> Rolling Window {window}',
-                   mode='lines', line={'dash': 'dash', 'color': 'Orange'}),
+                   mode='lines', line={'dash': 'dot', 'color': 'Orange'}),
     ])
     corr_reg = pd.concat([data[btc_price_kind], data[sentiment_kind]], axis=1).corr().iloc[1, 0]
     corr_rol = pd.concat([data[btc_price_kind].rolling(window).mean(), data[sentiment_kind].rolling(window).mean()],
                          axis=1).corr().iloc[1, 0]
     text = f'Solid Lines Corr: <b>{corr_reg: .3f}</b><br>' \
-           f'Dashed Lines Corr: <b>{corr_rol: .3f}</b>'
+           f'Dotted Lines Corr: <b>{corr_rol: .3f}</b>'
     # rgb(164,222,211)
     fig_layout = go.Layout(
         xaxis=go.layout.XAxis(
@@ -183,7 +183,7 @@ def plot_volume_tweet_count_timeseries(data: pd.DataFrame, volume_kind='volume_n
         go.Scatter(x=data.index, y=data['high_price_norm'], name='BTC High Normalized', mode='lines',
                    line={'dash': 'solid', 'color': 'yellow'}),
         go.Scatter(x=data.index, y=data['tweet_count_norm'], name='Tweet Count Normalized', mode='lines',
-                   line={'dash': 'dash', 'color': 'rgb(161,102,242)'}),
+                   line={'dash': 'dot', 'color': 'rgb(161,102,242)'}),
         go.Bar(x=data.index, y=data['tweet_count_norm'], name='Tweet Count Normalized'),
     ])
     fig_layout = go.Layout(
