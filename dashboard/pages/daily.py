@@ -79,7 +79,7 @@ def store_df_for_selected_sources(indices, session_storage):
 @callback(
     Output('corr-table-div-d', 'children'),
     Input('corr-table-storage-d', 'data'),
-    Input('close_error', 'n_clicks'),
+    Input('close_error-d', 'n_clicks'),
     State('not_selected_sources_error-d', 'is_open'),
     State('filtered-data-storage-d', 'data'),
     State('sentiment-table-d-dp', 'value'),
