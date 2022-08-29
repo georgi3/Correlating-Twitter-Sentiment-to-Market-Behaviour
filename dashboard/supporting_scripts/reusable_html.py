@@ -118,12 +118,12 @@ def plot_sentiment_btc_timeseries(data, btc_price_kind, btc_label, sentiment_kin
     fig.add_traces([
         go.Scatter(x=data.index, y=data[btc_price_kind], name=f'{btc_label}',
                    mode='lines', line={'dash': 'solid', 'color': 'yellow'}),
-        go.Scatter(x=data.index, y=data[btc_price_kind].rolling(window).mean(), name=f'{btc_label};'
+        go.Scatter(x=data.index, y=data[btc_price_kind].rolling(window).mean(), name=f'MA for {btc_label};'
                                                                                      f'<br> Rolling Window {window}',
                    mode='lines', line={'dash': 'dot', 'color': 'yellow'}),
         go.Scatter(x=data.index, y=data[sentiment_kind], name=f'{sentiment_label}',
                    mode='lines', line={'dash': 'solid', 'color': 'Orange'}),
-        go.Scatter(x=data.index, y=data[sentiment_kind].rolling(window).mean(), name=f'{sentiment_label};'
+        go.Scatter(x=data.index, y=data[sentiment_kind].rolling(window).mean(), name=f'MA for {sentiment_label};'
                                                                                      f'<br> Rolling Window {window}',
                    mode='lines', line={'dash': 'dot', 'color': 'Orange'}),
     ])
