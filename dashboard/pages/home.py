@@ -29,8 +29,8 @@ layout = html.Div(
             ]
         ),
         html.P('Tweets are filtered out to avoid spams, preprocessed  and then analyzed using using three techniques.'
-                'TextBlob Polarity, TextBlob Subjectivity and VADER (Valence Aware Dictionary sEntiment Reasoner) '
-                'Compound. After the scores are calculated, tweets are grouped by time intervals (daily/hourly) and '
-                'average statistics is computed per interval. The results are available in Daily and Hourly pages.')
+               'TextBlob Polarity, TextBlob Subjectivity and VADER (Valence Aware Dictionary sEntiment Reasoner) '
+               'Compound. After the scores are calculated, tweets are grouped by time intervals (daily/hourly) and '
+               'average statistics is computed per interval. The results are available in Daily and Hourly pages.')
     ]
 )
