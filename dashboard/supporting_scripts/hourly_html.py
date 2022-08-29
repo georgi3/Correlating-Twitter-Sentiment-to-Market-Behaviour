@@ -37,30 +37,72 @@ def build_tabs():
 def render_tab_1():
     return html.Div(
         children=[
-            dcc.Dropdown(
-                options=DROPDOWN_SENTIMENT,
-                placeholder='Average VADER Compound per Hour',
-                id='sentiment-table-h-dp',
-                value='avg_vader_compound',
-                clearable=False,
-            ),
-            dcc.Loading(
-                id='loading-corr-table-h',
-                type='circle',
-                fullscreen=True,
+            html.Div(
+                className='float-container',
                 children=[
-                    html.Div(id='corr-table-div-h')
+                    html.Div(
+                        className='float-child',
+                        children=[
+                            html.H5('Correlation Table for Each Source'),
+                            html.P('Choose sources for further analysis:'),
+                            dcc.Dropdown(
+                                options=DROPDOWN_SENTIMENT,
+                                placeholder='Average VADER Compound per Hour',
+                                id='sentiment-table-h-dp',
+                                value='avg_vader_compound',
+                                clearable=False,
+                            ),
+                            dcc.Loading(
+                                id='loading-corr-table-h',
+                                type='circle',
+                                fullscreen=True,
+                                children=[
+                                    html.Div(id='corr-table-div-h')
+                                ]
+                            ),
+                        ]
+                    ),
+                    html.Div(
+                        className='float-child',
+                        children=[
+                            html.H5(
+                                'Distribution of Selected Sources',
+                                className='title',
+                            ),
+                            dcc.Graph(
+                                id='pie-chart-h',
+                                className='pie-chart',
+                                style={'width': '70vh', 'height': '70vh'}
+                            )
+                        ]
+                    ),
                 ]
             ),
-            dcc.Graph(id='pie-chart-h')
         ],
-        style={'width': '48%', 'display': 'inline-block'}
     )
 
 
 def render_tab_2():
     return html.Div(
         children=[
+            html.H5(
+                'Timeseries for Sentiment and BTC for Selected Sources',
+                className='title',
+            ),
+            html.Div(
+                children=[
+                    html.Label('Rolling Mean K'),
+                    dcc.Input(
+                        id='rolling-window-h',
+                        type='number',
+                        value=3,
+                        min=2,
+                        className='rolling-input'
+                    ),
+                ],
+                style={'width': '48%', 'display': 'inline-block'}
+            ),
+            html.Br(),
             html.Div(
                 children=[
                     dcc.Dropdown(
@@ -83,19 +125,11 @@ def render_tab_2():
                 ],
                 style={'width': '48%', 'display': 'inline-block'}
             ),
-            html.Div(
-                children=[
-                    html.Label('Rolling Mean K'),
-                    dcc.Input(
-                        id='rolling-window-h',
-                        type='number',
-                        value=3,
-                        min=2
-                    ),
-                ],
-                style={'width': '48%', 'display': 'inline-block'}
-            ),
             dcc.Graph(id='ts-sentiment-btc-h'),
+            html.H5(
+                'Timeseries for Normalized BTC Volume and Tweet Count for Selected Sources',
+                className='title',
+            ),
             html.Div(
                 children=[
                     dcc.Dropdown(
@@ -107,6 +141,10 @@ def render_tab_2():
                 ]
             ),
             dcc.Graph(id='ts-volume-h'),
+            html.H5(
+                'Correlation Heatmap for Selected Sources',
+                className='title',
+            ),
             html.Div(
                 children=[
                     dcc.Dropdown(
@@ -128,7 +166,7 @@ def error_modal():
             dbc.ModalHeader(dbc.ModalTitle('Note:'), close_button=False),
             dbc.ModalBody('At least one source has to be selected!'),
             dbc.ModalFooter(
-                dbc.Button('Ok', id='close_error-h', n_clicks=0)
+                dbc.Button('Ok', id='close_error-h', className='close_error', n_clicks=0)
             ),
         ],
         id='not_selected_sources_error-h',
@@ -144,6 +182,7 @@ def layout():
             error_modal(),
             build_tabs(),
             html.Div(
+                className='tab-content',
                 id='tab-content-h',
             ),
             dcc.Store(id='corr-table-storage-h'),
