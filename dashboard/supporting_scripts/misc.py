@@ -60,6 +60,7 @@ def daily_pipe(tweets_daily: pd.DataFrame, btc_daily: pd.DataFrame):
     tweets_daily_df = tweet_daily_pipe(tweets_daily_df)
     dataframe = pd.merge(btc_daily_df, tweets_daily_df, left_on='date', right_index=True, how='right')
     dataframe.set_index('input_date', inplace=True)
+    dataframe.dropna(how='any', axis=0, inplace=True)  # drops the last date for which tweets exist but BTC stats don't
     dataframe[['open_price', 'high_price', 'low_price', 'close_price', 'adj_close_price', 'volume']] \
         = dataframe[['open_price', 'high_price', 'low_price', 'close_price', 'adj_close_price', 'volume']].astype(int)
     scaler = MinMaxScaler()
