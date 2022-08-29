@@ -86,7 +86,7 @@ def render_tab_2():
     return html.Div(
         children=[
             html.H5(
-                'Timeseries for Sentiment and BTC for Selected Sources',
+                'Timeseries for Sentiment and BTC with Moving Averages for Selected Sources',
                 className='title',
             ),
             html.Div(
