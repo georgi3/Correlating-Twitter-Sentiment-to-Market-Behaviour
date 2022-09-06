@@ -114,6 +114,7 @@ def hourly_pipe(tweets_hourly, btc_hourly):
     dataframe = pd.merge(btc_hourly_df, tweets_hourly_df, left_on='date',
                          right_on='tweet_created', how='right')
     dataframe.set_index('input_datetime', inplace=True)
+    dataframe.dropna(how='any', axis=0, inplace=True)  # drops the last hour for which tweets exist but BTC stats don't
     dataframe[['high_price', 'low_price', 'open_price', 'close_price', 'volumeto', 'volumefrom']] \
         = dataframe[['high_price', 'low_price', 'open_price', 'close_price', 'volumeto', 'volumefrom']].astype(int)
     scaler = MinMaxScaler()
