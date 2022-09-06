@@ -5,3 +5,11 @@ __pycache__/
 local_settings.py
 data/
 .env
+archive/
+*.csv
+**/scratch*
+src/data_extraction.ipynb
+notes.md
+serialized/
+dash_exp.py
+src/tokenizing.ipynb
