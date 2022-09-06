@@ -71,6 +71,7 @@ def serialization_routine():
     data_to_serialize['indices_mapping_d'] = indices_mapping_d
     data_to_serialize['indices_mapping_h'] = indices_mapping_h
     serialize(**data_to_serialize)
+    print('-------Serialization Completed-------')
 
 
 
