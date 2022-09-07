@@ -39,6 +39,7 @@ flask=2.1.2=pypi_0
 flask-compress=1.12=pypi_0
 flit-core=3.7.1=pyhd8ed1ab_0
 fonttools=4.33.3=pypi_0
+gunicorn=20.1.0=pypi_0
 idna=3.3=pypi_0
 importlib-metadata=4.11.4=py38h10201cd_0
 importlib_resources=5.8.0=pyhd8ed1ab_0
