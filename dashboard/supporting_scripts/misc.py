@@ -1,9 +1,40 @@
 import pandas as pd
-from dashboard.supporting_scripts.constants import ACCOUNTS, GET_ID, query_tweets, query_btc_daily, query_btc_hourly
-from data_managing.db_handler import retrieve_data
+from supporting_scripts.constants import ACCOUNTS, GET_ID, query_tweets, query_btc_daily, query_btc_hourly, USER, \
+    DATABASE, HOST, PORT, PASSWORD
+# from ..data_managing.db_handler import retrieve_data
+import psycopg2
+from psycopg2 import DatabaseError
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.pipeline import Pipeline
+
+
+def create_connection():
+    """Connects to db server"""
+    try:
+        connection = psycopg2.connect(user=USER, database=DATABASE, host=HOST, port=PORT, password=PASSWORD,
+                                      sslmode='require')
+        cursor = connection.cursor()
+    except (Exception, DatabaseError) as err:
+        raise Exception(f'Could not connect to server: {err}')
+    return connection, cursor
+
+
+def retrieve_data(query):
+    """Retrieves all the data"""
+    connection = None
+    rows = None
+    try:
+        connection, cursor = create_connection()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+        print(f'Rows have been retrieved')
+    except (Exception, DatabaseError) as err:
+        print(f'Failed to retrieve rows. ERROR: {err}')
+    finally:
+        connection.close()
+    return rows
 
 
 def to_datetime(dataframe: pd.DataFrame, columns: list):
