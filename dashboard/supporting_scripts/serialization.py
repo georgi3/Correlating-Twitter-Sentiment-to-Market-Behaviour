@@ -1,5 +1,5 @@
-from dashboard.supporting_scripts.constants import CORR_WITH_VALUES
-from dashboard.supporting_scripts.misc import acc_corr_table, get_dataframes
+from supporting_scripts.constants import CORR_WITH_VALUES
+from supporting_scripts.misc import acc_corr_table, get_dataframes
 import datetime
 import pytz
 import pickle
@@ -75,7 +75,7 @@ def serialization_routine():
     data_to_serialize['indices_mapping_d'] = indices_mapping_d
     data_to_serialize['indices_mapping_h'] = indices_mapping_h
     serialize(**data_to_serialize)
-    print(f'Timezone: {TZ}\nDatetime: {datetime.datetime.now(TZ).strftime("%d/%m/%Y %H:%m")}')
+    print(f'Timezone: {TZ}\nDatetime: {datetime.datetime.now(TZ).strftime("%d/%m/%Y %H:%M")}')
     print('-------Serialization Completed-------\n')
 
 
