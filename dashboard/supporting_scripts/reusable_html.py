@@ -1,6 +1,6 @@
 from dash import dash_table
 import pandas as pd
-from dashboard.supporting_scripts.misc import round_dash_table
+from supporting_scripts.misc import round_dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 
