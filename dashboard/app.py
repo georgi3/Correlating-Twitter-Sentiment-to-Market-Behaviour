@@ -3,7 +3,7 @@ from dash import Dash, html
 import dash
 import flask
 import datetime
-import manage_serialization
+# import manage_serialization
 
 
 # TODO: 1. Add select all to datatable  https://github.com/plotly/dash-table/issues/249#issuecomment-693131768
@@ -14,9 +14,9 @@ import manage_serialization
 #       Building Components: https://dash.plotly.com/react-for-python-developers
 #       Embedding Dash: https://dash.plotly.com/integrating-dash
 
-server = flask.Flask(__name__)
-server.secret_key = ';lmdflksngnskgnpafponf'
-server.config['DEBUG'] = True
+# server = flask.Flask(__name__)
+# server.secret_key = ';lmdflksngnskgnpafponf'
+# server.config['DEBUG'] = True
 app = Dash(__name__,
            use_pages=True,
            external_stylesheets=[dbc.themes.BOOTSTRAP],
@@ -26,7 +26,8 @@ app = Dash(__name__,
                    "content": "width=device-width, initial-scale=1"
                }
            ],
-           server=server)
+           # server=server
+           )
 app.title = 'BTC vs Tweets'
 app.config['suppress_callback_exceptions'] = True
 
