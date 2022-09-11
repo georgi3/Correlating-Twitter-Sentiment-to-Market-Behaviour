@@ -3,7 +3,7 @@ from dash import Dash, html
 import dash
 import flask
 import datetime
-# import manage_serialization
+import manage_serialization
 
 
 # TODO: 1. Add select all to datatable  https://github.com/plotly/dash-table/issues/249#issuecomment-693131768
