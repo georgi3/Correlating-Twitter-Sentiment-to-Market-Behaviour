@@ -1,3 +1,11 @@
+import os
+from dotenv import load_dotenv
+from os.path import join, dirname
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+
 DROPDOWN_SENTIMENT = {
     'avg_vader_compound': 'Average VADER Compound per Day',
     'avg_tb_subjectivity': 'Average TextBlob subjectivity per Day',
@@ -88,6 +96,13 @@ CORR_WITH_VALUES = [
     'avg_tb_subjectivity',
     'avg_tb_polarity',
 ]
+
+# DATABASE
+DATABASE = os.environ['DATABASE']
+USER = os.environ['DB_USERNAME']
+PASSWORD = os.environ['DB_PASSWORD']
+HOST = os.environ['HOST']
+PORT = os.environ['PORT']
 
 query_tweets = f"""
 SELECT tweet_created, vader_compound, text_blob_polarity, text_blob_subjectivity, author_id,
