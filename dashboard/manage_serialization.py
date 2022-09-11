@@ -1,4 +1,4 @@
-from dashboard.supporting_scripts.serialization import serialization_routine
+from supporting_scripts.serialization import serialization_routine
 from apscheduler.schedulers.background import BackgroundScheduler
 import datetime
 

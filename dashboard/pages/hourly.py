@@ -2,12 +2,12 @@ import pandas as pd
 import json
 import dash
 from dash import callback, Output, Input, State
-from dashboard.supporting_scripts.hourly_html import layout, render_tab_1, render_tab_2
-from dashboard.supporting_scripts.serialization import read_serialized
-from dashboard.supporting_scripts.reusable_html import create_dash_table, plot_pie_chart, \
+from supporting_scripts.hourly_html import layout, render_tab_1, render_tab_2
+from supporting_scripts.serialization import read_serialized
+from supporting_scripts.reusable_html import create_dash_table, plot_pie_chart, \
     plot_sentiment_btc_timeseries, plot_correlation_heatmap, plot_volume_tweet_count_timeseries
-from dashboard.supporting_scripts.misc import parse_input, query_df, hourly_pipe
-from dashboard.supporting_scripts.constants import TOOLTIP_INFO_H
+from supporting_scripts.misc import parse_input, query_df, hourly_pipe
+from supporting_scripts.constants import TOOLTIP_INFO_H
 
 dash.register_page(__name__, path='/hourly-analysis/')
 
