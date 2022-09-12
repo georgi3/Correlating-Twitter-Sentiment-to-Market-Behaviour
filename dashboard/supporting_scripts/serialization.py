@@ -14,7 +14,7 @@ def serialize(**kwargs):
     :param kwargs: name of the object and object itself
     """
     if not os.path.isdir('./serialized'):
-        os.mkdir('./serialization')
+        os.mkdir('./serialized')
     for label, df in kwargs.items():
         with open(f'serialized/{label}.pickle', 'wb') as f:
             pickle.dump(df, f)
